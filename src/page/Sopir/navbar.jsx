@@ -6,12 +6,12 @@ import Gaskeunn from '../../assets/img/Gaskeunn.png'
 
 const navItems = [
     { name: 'Home', path: '/home'},
-    { name: 'Booking', path: '/booking'},
-    { name: 'Route & Schedule', path: '/routeschedule'},
-    { name: 'News', path: '/news'},
-    { name: 'History', path: '/history'},
-    { name: 'About Us', path: '/aboutus'},
-    { name: 'Contact Us', path: '/contactus'},
+    { name: 'Order', path: '/order'},
+    { name: 'Route & Schedule', path: '/routeschedulesopir'},
+    { name: 'News', path: '/newssopir'},
+    { name: 'Work History', path: '/workhistory'},
+    { name: 'About Us', path: '/aboutussopir'},
+    { name: 'Contact Us', path: '/contactussopir'},
 ];
 
 // Data notifikasi (idealnya dari context/state management)
@@ -181,7 +181,7 @@ function Navbar() {
                             )}
                         </Link>
                         
-                        <Link to="/profile" title="Profil Pengguna">
+                        <Link to="/profilesopir" title="Profil Sopir">
                             <IoIosPerson className="h-8 w-8 text-white bg-gray-600 rounded-full p-1 border-2 hover:bg-[oklch(0.55_0.14_243.17)] transition duration-150" />
                         </Link>
                     </div>

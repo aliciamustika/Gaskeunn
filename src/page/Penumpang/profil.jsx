@@ -3,16 +3,18 @@ import React, { useState } from 'react';
 import { 
   Cake, Mail, Phone, User, GraduationCap, Home, 
   FileText, BookOpen, Lightbulb, Users, Linkedin, 
-  Camera, Download
+  Camera, Pencil, X, Check
 } from 'lucide-react';
 import Navbar from './navbar';
 import Footer from '../../components/footer';
+import BinusLogo from '../../assets/img/binus-putih.png';
 
 function Profile() {
   const [profileImage, setProfileImage] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   
-  // Sample user data - replace with real data from API/state
-  const userData = {
+  // User data state - editable fields
+  const [userData, setUserData] = useState({
     personal: {
       name: 'Ni Putu Saraswati',
       nim: '2902654051',
@@ -27,12 +29,20 @@ function Profile() {
       binusianId: 'BN318092583',
       program: 'Computer Science',
       degreeTitle: 'Bachelor of Computer Science',
-      homeCampus: 'Kemanggisan',
+      homeCampus: 'Malang',
       stream: 'Software Engineering',
       enrichmentTrack: 'Artificial Intelligence',
       class: 'L1BC'
     }
-  };
+  });
+
+  // Temporary state for editing
+  const [editData, setEditData] = useState({
+    birthDate: userData.personal.birthDate,
+    gender: userData.personal.gender,
+    phone: userData.personal.phone,
+    linkedin: userData.personal.linkedin
+  });
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -45,302 +55,357 @@ function Profile() {
     }
   };
 
+  const handleEditClick = () => {
+    setEditData({
+      birthDate: userData.personal.birthDate,
+      gender: userData.personal.gender,
+      phone: userData.personal.phone,
+      linkedin: userData.personal.linkedin
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditData({
+      birthDate: userData.personal.birthDate,
+      gender: userData.personal.gender,
+      phone: userData.personal.phone,
+      linkedin: userData.personal.linkedin
+    });
+  };
+
+  const handleSaveEdit = () => {
+    setUserData(prev => ({
+      ...prev,
+      personal: {
+        ...prev.personal,
+        birthDate: editData.birthDate,
+        gender: editData.gender,
+        phone: editData.phone,
+        linkedin: editData.linkedin
+      }
+    }));
+    setIsEditing(false);
+  };
+
+  const handleInputChange = (field, value) => {
+    setEditData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       <Navbar />
 
-      {/* Profile Header with BINUS Banner */}
-      <div className="relative bg-linear-to-r from-blue-600 to-blue-700 pb-24 sm:pb-32">
-        {/* BINUS Banner Background */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute left-0 top-0 w-2/3 h-full bg-blue-500/20 rounded-r-3xl border-4 border-white/20">
-            <div className="p-8">
-              {/* BINUS Logo Area */}
-              <div className="flex items-center space-x-2 mb-8">
-                <div className="w-16 h-16 bg-white/90 rounded-lg flex items-center justify-center">
-                  <div className="text-blue-600 font-black text-sm text-center leading-tight">
-                    BINUS<br/>UNIVERSITY
-                  </div>
-                </div>
-              </div>
-              
-              {/* Slogan */}
-              <h2 className="text-3xl md:text-4xl font-bold text-white tracking-wide">
-                People. Innovation. Excellence
-              </h2>
-              
-              {/* Decorative Pattern */}
-              <div className="mt-12 grid grid-cols-8 gap-4 opacity-20">
-                {[...Array(32)].map((_, i) => (
-                  <div key={i} className="aspect-square bg-white/30 rounded-lg"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Profile Picture & Info */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="flex flex-col md:flex-row items-center md:items-start md:justify-between">
-            {/* Left side - spacer for banner */}
-            <div className="w-full md:w-2/3"></div>
+      {/* Full Screen Profile Card */}
+      <div className="flex-1 flex">
+        <div className="w-full bg-white flex flex-col lg:flex-row">
+          
+          {/* Left Side - Blue Banner */}
+          <div className="lg:w-1/4 xl:w-1/5 bg-gradient-to-b from-blue-600 to-blue-700 p-6 lg:p-8 relative overflow-hidden lg:min-h-[calc(100vh-64px)]">
+            {/* Decorative curves */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/30 rounded-full -mr-24 -mt-24"></div>
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full -mr-16 -mb-16"></div>
+            <div className="absolute bottom-1/3 left-0 w-24 h-24 bg-blue-500/20 rounded-full -ml-12"></div>
             
-            {/* Right side - Profile Info */}
-            <div className="w-full md:w-1/3 flex flex-col items-center mt-8 md:mt-0">
-              {/* Profile Picture */}
-              <div className="relative group">
-                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-8 border-white shadow-2xl overflow-hidden bg-gray-200">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-gray-300 to-gray-400">
-                      <User className="w-16 h-16 text-gray-500" />
-                    </div>
-                  )}
-                </div>
-                
-                {/* Upload Button Overlay */}
-                <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <Camera className="w-8 h-8 text-white" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </label>
+            {/* Content Container */}
+            <div className="relative z-10 flex flex-col h-full">
+              {/* BINUS Logo */}
+              <div className="mb-8">
+                <img 
+                  src={BinusLogo} 
+                  alt="BINUS University" 
+                  className="h-10 lg:h-12 w-auto object-contain"
+                />
               </div>
 
-              {/* User Name & NIM */}
-              <div className="mt-6 text-center">
-                <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
+              {/* Profile Picture */}
+              <div className="flex justify-center mb-6">
+                <div className="relative group">
+                  <div className="w-28 h-28 lg:w-36 lg:h-36 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-gray-200">
+                    {profileImage ? (
+                      <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-300 to-gray-400">
+                        <User className="w-12 h-12 lg:w-16 lg:h-16 text-gray-500" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Upload Button Overlay */}
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <Camera className="w-8 h-8 text-white" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* User Name */}
+              <div className="text-center mb-6">
+                <h1 className="text-xl lg:text-2xl font-bold text-white mb-1">
                   {userData.personal.name}
                 </h1>
-                <div className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                  <span className="text-white font-bold text-sm">
-                    {userData.personal.nim}
-                  </span>
-                  <button className="w-6 h-6 bg-amber-500 hover:bg-amber-600 rounded flex items-center justify-center transition-colors">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M8 2a1 1 0 000 2h2a1 1 0 100-2H8z" />
-                      <path d="M3 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6h-4.586l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L10.414 13H15v3a2 2 0 01-2 2H5a2 2 0 01-2-2V5zM15 11h2a1 1 0 110 2h-2v-2z" />
-                    </svg>
+                <p className="text-blue-200 text-sm mb-1">
+                  {userData.academic.program}
+                </p>
+                <p className="text-blue-200 text-sm">
+                  BINUS @{userData.academic.homeCampus}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3">
+                {!isEditing ? (
+                  <button
+                    onClick={handleEditClick}
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-full font-medium text-sm transition-colors w-full"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit Profile
                   </button>
-                </div>
-                <p className="text-white/80 text-sm mt-3">
-                  Member since <span className="font-semibold">{userData.personal.memberSince}</span>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleSaveEdit}
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium text-sm transition-colors w-full"
+                    >
+                      <Check className="w-4 h-4" />
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-full font-medium text-sm transition-colors border border-white/30 w-full"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Member Since - Push to bottom */}
+              <div className="mt-auto pt-6 border-t border-white/20">
+                <p className="text-blue-200 text-xs text-center">
+                  Member since <span className="font-semibold text-white">{userData.personal.memberSince}</span>
                 </p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 pb-16">
-        
-        {/* My Personal Identity Title */}
-        <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900">
-            My Personal Identity
-          </h2>
-        </div>
+          {/* Right Side - Profile Details */}
+          <div className="lg:w-3/4 xl:w-4/5 p-6 lg:p-10 overflow-y-auto lg:max-h-[calc(100vh-64px)]">
+            
+            {/* Page Title */}
+            <div className="mb-8">
+              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">My Profile</h2>
+              <p className="text-gray-500 mt-1">Manage your personal and academic information</p>
+            </div>
 
-        {/* Personal Information Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-6">
-          <h3 className="text-xl font-black text-gray-900 mb-6">Personal Information</h3>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Birth Information */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <Cake className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Birth Information
+            {/* Personal Information Section */}
+            <div className="mb-10">
+              <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-3">
+                <div className="w-1.5 h-7 bg-blue-600 rounded-full"></div>
+                Personal Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {/* Birth Information */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Cake className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Birth Information</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editData.birthDate}
+                        onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                        className="w-full text-sm font-semibold text-gray-900 border border-gray-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="text-base font-semibold text-gray-900 truncate">{userData.personal.birthDate}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.personal.birthDate}
+
+                {/* Email */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Mail className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Email</p>
+                    <p className="text-base font-semibold text-gray-900 truncate">{userData.personal.email}</p>
+                  </div>
+                </div>
+
+                {/* LinkedIn */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Linkedin className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">LinkedIn</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editData.linkedin}
+                        onChange={(e) => handleInputChange('linkedin', e.target.value)}
+                        className="w-full text-sm font-semibold text-gray-900 border border-gray-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <a 
+                        href={`https://${userData.personal.linkedin}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-base font-semibold text-blue-600 hover:underline truncate block"
+                      >
+                        {userData.personal.linkedin}
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Gender */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <User className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Gender</p>
+                    {isEditing ? (
+                      <select
+                        value={editData.gender}
+                        onChange={(e) => handleInputChange('gender', e.target.value)}
+                        className="w-full text-sm font-semibold text-gray-900 border border-gray-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="Laki-laki">Laki-laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                      </select>
+                    ) : (
+                      <p className="text-base font-semibold text-gray-900">{userData.personal.gender}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Phone className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Phone Number</p>
+                    {isEditing ? (
+                      <input
+                        type="tel"
+                        value={editData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        className="w-full text-sm font-semibold text-gray-900 border border-gray-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <p className="text-base font-semibold text-gray-900">{userData.personal.phone}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Email */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <Mail className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Email
+            {/* Academic Information Section */}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-3">
+                <div className="w-1.5 h-7 bg-green-600 rounded-full"></div>
+                Academic Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {/* Binusian ID */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <FileText className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Binusian ID</p>
+                    <p className="text-base font-semibold text-gray-900">{userData.academic.binusianId}</p>
+                  </div>
                 </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.personal.email}
-                </div>
-              </div>
-            </div>
 
-            {/* LinkedIn */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <Linkedin className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  LinkedIn
+                {/* Program */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <BookOpen className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Program</p>
+                    <p className="text-base font-semibold text-gray-900">{userData.academic.program}</p>
+                  </div>
                 </div>
-                <div className="text-sm font-bold text-blue-600 truncate hover:underline cursor-pointer">
-                  {userData.personal.linkedin}
-                </div>
-              </div>
-            </div>
 
-            {/* Gender */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <User className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Gender
+                {/* Degree Title */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <GraduationCap className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Degree Title</p>
+                    <p className="text-base font-semibold text-gray-900">{userData.academic.degreeTitle}</p>
+                  </div>
                 </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.personal.gender}
-                </div>
-              </div>
-            </div>
 
-            {/* Phone Number */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <Phone className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Phone Number
+                {/* Home Campus */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Home className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Home Campus</p>
+                    <p className="text-base font-semibold text-gray-900">{userData.academic.homeCampus}</p>
+                  </div>
                 </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.personal.phone}
+
+                {/* Stream */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <BookOpen className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Stream</p>
+                    <p className="text-base font-semibold text-gray-900">{userData.academic.stream}</p>
+                  </div>
+                </div>
+
+                {/* Enrichment Track */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Lightbulb className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Enrichment Track</p>
+                    <p className="text-base font-semibold text-gray-900">{userData.academic.enrichmentTrack}</p>
+                  </div>
+                </div>
+
+                {/* Class */}
+                <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                    <Users className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Class</p>
+                    <p className="text-base font-semibold text-gray-900">{userData.academic.class}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Academic Information Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-          <h3 className="text-xl font-black text-gray-900 mb-6">Academic Information</h3>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Binusian ID */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Binusian ID
-                </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.academic.binusianId}
-                </div>
-              </div>
-            </div>
-
-            {/* Program */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <BookOpen className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Program
-                </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.academic.program}
-                </div>
-              </div>
-            </div>
-
-            {/* Degree Title */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <GraduationCap className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Degree Title
-                </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.academic.degreeTitle}
-                </div>
-              </div>
-            </div>
-
-            {/* Home Campus */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <Home className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Home Campus
-                </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.academic.homeCampus}
-                </div>
-              </div>
-            </div>
-
-            {/* Stream */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <BookOpen className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Stream
-                </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.academic.stream}
-                </div>
-              </div>
-            </div>
-
-            {/* Enrichment Track */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <Lightbulb className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Enrichment Track
-                </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.academic.enrichmentTrack}
-                </div>
-              </div>
-            </div>
-
-            {/* Class */}
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                <Users className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                  Class
-                </div>
-                <div className="text-sm font-bold text-gray-900 truncate">
-                  {userData.academic.class}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-      <Footer />
     </div>
   );
 };

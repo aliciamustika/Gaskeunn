@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Phone, Mail, MapPin, Send, CheckCircle } from 'lucide-react';
 import Navbar from './navbar';
 import Footer from '../../components/footer';
@@ -16,6 +16,13 @@ function ContactUs(){
     loading: false,
     error: null
   });
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

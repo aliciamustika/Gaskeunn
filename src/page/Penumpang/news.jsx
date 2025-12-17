@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ChevronRight, MapPin, Mail, Phone } from "lucide-react";
 import Navbar from "./navbar";
 import Footer from "../../components/footer";
@@ -12,6 +12,13 @@ import Wisuda from "../../assets/img/wisuda.jpg"
 import Alumni from "../../assets/img/alumni.jpg"
 
 const GaskeunnNews = () => {
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
   const featuredNews = {
     title: "Kapolresta Malang Kota Inisiasi Buka Posko Tanggap Bencana",
     source: "CNN Indonesia",

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useLocation } from "react-router-dom";
 import { IoIosMenu, IoIosClose, IoIosPerson } from 'react-icons/io'; 
 import { BellRing } from 'lucide-react';
-import Gaskeunn from '../../assets/img/Gaskeunn.png'
+import Gaskeunn from '../../assets/img/Gaskeunn.png';
+import { useNotifications } from './notificationContext';
 
 const navItems = [
     { name: 'Home', path: '/home'},
@@ -14,96 +15,12 @@ const navItems = [
     { name: 'Contact Us', path: '/contactus'},
 ];
 
-// Data notifikasi (idealnya dari context/state management)
-const notifications = [
-    {
-      id: 1,
-      type: "booking",
-      title: "Booking Berhasil!",
-      message: "Tiket shuttle Anda untuk tanggal 19 Desember 2025 telah dikonfirmasi. Bus 1, Kursi 12.",
-      time: "5 menit yang lalu",
-      date: "16 Des 2025",
-      isRead: false,
-      icon: "ticket",
-    },
-    {
-      id: 2,
-      type: "reminder",
-      title: "Pengingat Keberangkatan",
-      message: "Shuttle Anda akan berangkat dalam 30 menit dari Perempatan Tirtomoyo Security. Jangan sampai ketinggalan!",
-      time: "30 menit yang lalu",
-      date: "16 Des 2025",
-      isRead: false,
-      icon: "clock",
-    },
-    {
-      id: 3,
-      type: "announcement",
-      title: "Jadwal Baru Tersedia",
-      message: "Jadwal shuttle untuk bulan Januari 2026 telah tersedia. Silakan cek dan booking sekarang!",
-      time: "2 jam yang lalu",
-      date: "16 Des 2025",
-      isRead: false,
-      icon: "megaphone",
-    },
-    {
-      id: 4,
-      type: "tracking",
-      title: "Bus Dalam Perjalanan",
-      message: "Bus 1 sedang menuju titik penjemputan Anda. Estimasi tiba: 5 menit lagi.",
-      time: "3 jam yang lalu",
-      date: "16 Des 2025",
-      isRead: true,
-      icon: "bus",
-    },
-    {
-      id: 5,
-      type: "info",
-      title: "Tips Perjalanan",
-      message: "Pastikan Anda sudah berada di titik penjemputan 10 menit sebelum jadwal keberangkatan untuk menghindari keterlambatan.",
-      time: "5 jam yang lalu",
-      date: "16 Des 2025",
-      isRead: true,
-      icon: "info",
-    },
-    {
-      id: 6,
-      type: "success",
-      title: "Perjalanan Selesai",
-      message: "Terima kasih telah menggunakan Gaskeunn! Perjalanan Anda dari Araya ke BINUS University telah selesai.",
-      time: "1 hari yang lalu",
-      date: "15 Des 2025",
-      isRead: true,
-      icon: "check",
-    },
-    {
-      id: 7,
-      type: "announcement",
-      title: "Promo Akhir Tahun!",
-      message: "Dapatkan diskon 20% untuk booking shuttle selama periode 20-31 Desember 2025. Gunakan kode: NEWYEAR20",
-      time: "2 hari yang lalu",
-      date: "14 Des 2025",
-      isRead: true,
-      icon: "megaphone",
-    },
-    {
-      id: 8,
-      type: "alert",
-      title: "Perubahan Rute Sementara",
-      message: "Rute via Jl. Telaga Golf akan dialihkan sementara karena perbaikan jalan. Mohon perhatikan titik penjemputan alternatif.",
-      time: "3 hari yang lalu",
-      date: "13 Des 2025",
-      isRead: true,
-      icon: "alert",
-    },
-];
-
 function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
     
-    // Hitung jumlah notifikasi yang belum dibaca
-    const unreadCount = notifications.filter(n => !n.isRead).length;
+    // Gunakan context untuk mendapatkan unreadCount
+    const { unreadCount } = useNotifications();
     
     const isActive = (path) => {
         return location.pathname === path;

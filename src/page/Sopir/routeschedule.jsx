@@ -4,9 +4,6 @@ import {
   TileLayer,
   Marker,
   Popup,
-  Polyline,
-  CircleMarker,
-  Tooltip,
 } from "react-leaflet";
 import {
   Navigation,
@@ -33,6 +30,65 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+// Bus Stop Icon seperti gambar referensi - lingkaran dengan bus dan tiang
+const createBusStopSignIcon = (id, isMain = false, isHovered = false) => {
+  const circleSize = isMain ? 36 : isHovered ? 34 : 32;
+  const poleHeight = 20;
+  const totalWidth = circleSize;
+  const totalHeight = circleSize + poleHeight;
+  const bgColor = isMain ? "#F59E0B" : "#DC2626"; // Oranye untuk main, Merah untuk lainnya
+  const borderColor = isMain ? "#D97706" : "#B91C1C";
+  const poleColor = "#9CA3AF";
+  
+  const svgIcon = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">
+      <!-- Tiang/Pole -->
+      <rect x="${totalWidth/2 - 2}" y="${circleSize - 4}" width="4" height="${poleHeight + 4}" fill="${poleColor}"/>
+      
+      <!-- Lingkaran utama -->
+      <circle cx="${totalWidth/2}" cy="${circleSize/2}" r="${circleSize/2 - 2}" fill="${bgColor}" stroke="${borderColor}" stroke-width="2"/>
+      
+      <!-- Bus Icon -->
+      <g transform="translate(${totalWidth/2 - 10}, ${circleSize/2 - 8})">
+        <!-- Body bus -->
+        <rect x="2" y="2" width="16" height="12" rx="2" fill="white"/>
+        
+        <!-- Jendela atas -->
+        <rect x="4" y="4" width="5" height="4" rx="1" fill="${bgColor}"/>
+        <rect x="11" y="4" width="5" height="4" rx="1" fill="${bgColor}"/>
+        
+        <!-- Garis bawah jendela -->
+        <rect x="2" y="10" width="16" height="2" fill="#E5E7EB"/>
+        
+        <!-- Roda -->
+        <circle cx="6" cy="14" r="2" fill="#374151"/>
+        <circle cx="14" cy="14" r="2" fill="#374151"/>
+        <circle cx="6" cy="14" r="1" fill="#9CA3AF"/>
+        <circle cx="14" cy="14" r="1" fill="#9CA3AF"/>
+      </g>
+      
+      <!-- ID Label di bawah -->
+      <rect x="${totalWidth/2 - 10}" y="${circleSize + 6}" width="20" height="12" rx="2" fill="white" stroke="${bgColor}" stroke-width="1"/>
+      <text x="${totalWidth/2}" y="${circleSize + 13}" 
+            font-family="Arial, sans-serif" 
+            font-size="8" 
+            font-weight="bold" 
+            fill="${bgColor}" 
+            text-anchor="middle" 
+            dominant-baseline="middle">${id}</text>
+    </svg>
+  `;
+
+  return L.divIcon({
+    html: svgIcon,
+    className: "custom-bus-stop-sign-icon",
+    iconSize: [totalWidth, totalHeight],
+    iconAnchor: [totalWidth / 2, totalHeight],
+    popupAnchor: [0, -(totalHeight - 10)],
+    tooltipAnchor: [totalWidth / 2 + 5, -(circleSize / 2)],
+  });
+};
+
 const RuteJadwal = () => {
   const [expandedSection, setExpandedSection] = useState(null);
   const [selectedStop, setSelectedStop] = useState(null);
@@ -49,172 +105,174 @@ const RuteJadwal = () => {
     setExpandedDay(expandedDay === day ? null : day);
   };
 
-  // Bus stops data
+  // Koordinat GPS titik jemput dengan detail info (sama seperti di route.jsx)
   const busStops = [
     {
       id: "T0",
       name: "BINUS University",
       fullName: "Titik Keberangkatan & Titik Akhir (BINUS)",
       position: [-7.939326456906397, 112.68104383601565],
-      color: "blue",
       isMain: true,
+      landmark: "Kampus BINUS Malang",
+      description: "Titik keberangkatan dan tujuan akhir shuttle bus",
+      schedule: "Berangkat: 06:30, 07:00, 07:30",
     },
     {
       id: "T1",
       name: "Perempatan Tirtomoyo Security",
       fullName: "Titik Jemput 1 (Perempatan Tirtomoyo Security)",
       position: [-7.9368482258999595, 112.67512243871319],
-      color: "blue",
+      landmark: "Pos Security Tirtomoyo",
+      description: "Depan pos keamanan perempatan Tirtomoyo",
+      schedule: "Estimasi: 06:35, 07:05, 07:35",
     },
     {
       id: "T2",
       name: "Telaga Golf",
       fullName: "Titik Jemput 2 (Telaga Golf)",
       position: [-7.941358235719524, 112.67013604607745],
-      color: "blue",
+      landmark: "Area Telaga Golf Araya",
+      description: "Dekat pintu masuk Telaga Golf",
+      schedule: "Estimasi: 06:38, 07:08, 07:38",
     },
     {
       id: "T3",
       name: "Seberang KDS",
       fullName: "Titik Jemput 3 (Seberang KDS)",
       position: [-7.940685087521296, 112.66265334474845],
-      color: "blue",
+      landmark: "Sebrang KDS Araya",
+      description: "Di seberang KDS (Klub Dapur Sehat)",
+      schedule: "Estimasi: 06:42, 07:12, 07:42",
     },
     {
       id: "T4",
       name: "Masjid Ramadhan",
       fullName: "Titik Jemput 4 (Masjid Ramadhan)",
       position: [-7.942076948819757, 112.6555424479944],
-      color: "blue",
+      landmark: "Masjid Ramadhan Araya",
+      description: "Depan Masjid Ramadhan",
+      schedule: "Estimasi: 06:45, 07:15, 07:45",
     },
     {
       id: "T5",
       name: "GPIB Getsemani",
       fullName: "Titik Jemput 5 (GPIB Getsemani)",
       position: [-7.939611350269796, 112.65383357900237],
-      color: "blue",
+      landmark: "Gereja GPIB Getsemani",
+      description: "Depan Gereja GPIB Getsemani",
+      schedule: "Estimasi: 06:48, 07:18, 07:48",
     },
     {
       id: "T6",
       name: "Taman Blok J",
       fullName: "Titik Jemput 6 (Taman Blok J)",
       position: [-7.9372648563697155, 112.65285223741527],
-      color: "blue",
+      landmark: "Taman Blok J Araya",
+      description: "Area taman di Blok J perumahan Araya",
+      schedule: "Estimasi: 06:50, 07:20, 07:50",
     },
     {
       id: "T7",
       name: "Hotel Grand Cakra",
       fullName: "Titik Jemput 7 (Hotel Grand Cakra)",
       position: [-7.935752031189624, 112.65120833667353],
-      color: "blue",
+      landmark: "Hotel Grand Cakra Malang",
+      description: "Depan lobby Hotel Grand Cakra",
+      schedule: "Estimasi: 06:53, 07:23, 07:53",
     },
     {
       id: "T8",
       name: "Bundaran PBI",
       fullName: "Titik Jemput 8 (Bundaran PBI)",
       position: [-7.936259176829228, 112.65531911245313],
-      color: "blue",
+      landmark: "Bundaran PBI Araya",
+      description: "Di area bundaran PBI",
+      schedule: "Estimasi: 06:56, 07:26, 07:56",
     },
     {
       id: "T9",
       name: "Bundaran Pujasera Nusantara",
       fullName: "Titik Jemput 9 (Bundaran Pujasera Nusantara)",
       position: [-7.937506892617456, 112.65819299365303],
-      color: "blue",
+      landmark: "Pujasera Nusantara",
+      description: "Dekat bundaran Pujasera Nusantara",
+      schedule: "Estimasi: 06:58, 07:28, 07:58",
     },
     {
       id: "T10",
       name: "Bundaran Roket",
       fullName: "Titik Jemput 10 (Bundaran Roket)",
       position: [-7.937979854196419, 112.65914221601237],
-      color: "blue",
+      landmark: "Bundaran Roket Araya",
+      description: "Di bundaran dengan monumen roket",
+      schedule: "Estimasi: 07:00, 07:30, 08:00",
     },
     {
       id: "T11",
       name: "Masjo Masakan Jawa",
       fullName: "Titik Jemput 11 (Masjo Masakan Jawa)",
       position: [-7.938728078786892, 112.66125923921314],
-      color: "blue",
+      landmark: "Restoran Masjo",
+      description: "Depan restoran Masjo Masakan Jawa",
+      schedule: "Estimasi: 07:03, 07:33, 08:03",
     },
     {
       id: "T12",
       name: "KDS",
       fullName: "Titik Jemput 12 (KDS)",
       position: [-7.940201961410049, 112.66124748741488],
-      color: "blue",
+      landmark: "KDS (Klub Dapur Sehat)",
+      description: "Depan KDS Araya",
+      schedule: "Estimasi: 07:05, 07:35, 08:05",
     },
     {
       id: "T13",
       name: "Djoglo/Djati Lounge",
       fullName: "Titik Jemput 13 (Djoglo/Djati Lounge)",
       position: [-7.93116074251041, 112.66417711204983],
-      color: "blue",
+      landmark: "Djoglo/Djati Lounge",
+      description: "Depan Djoglo atau Djati Lounge",
+      schedule: "Estimasi: 07:08, 07:38, 08:08",
     },
     {
       id: "T14",
       name: "Perempatan Kecil Tirtomoyo",
       fullName: "Titik Jemput 14 (Perempatan Kecil Tirtomoyo)",
       position: [-7.9376605829719065, 112.67452223651625],
-      color: "blue",
+      landmark: "Perempatan Kecil Tirtomoyo",
+      description: "Di perempatan kecil area Tirtomoyo",
+      schedule: "Estimasi: 07:12, 07:42, 08:12",
     },
     {
       id: "T15",
       name: "Ixora Valley",
       fullName: "Titik Jemput 15 (Ixora Valley)",
       position: [-7.93502926553001, 112.68385203667356],
-      color: "blue",
+      landmark: "Perumahan Ixora Valley",
+      description: "Pintu masuk Ixora Valley",
+      schedule: "Estimasi: 07:15, 07:45, 08:15",
     },
     {
       id: "T16",
       name: "Kvadra",
       fullName: "Titik Jemput 16 (Kvadra)",
       position: [-7.940862091410173, 112.68453817829278],
-      color: "blue",
+      landmark: "Kvadra Araya",
+      description: "Depan area Kvadra",
+      schedule: "Estimasi: 07:18, 07:48, 08:18",
     },
     {
       id: "T17",
       name: "M-House",
       fullName: "Titik Jemput 17 (M-House)",
       position: [-7.941645826513525, 112.68453102610313],
-      color: "blue",
+      landmark: "M-House Araya",
+      description: "Depan M-House",
+      schedule: "Estimasi: 07:20, 07:50, 08:20",
     },
   ];
 
-  // Route paths
-  const mainRoutePath = [
-    [-7.939326456906397, 112.68104383601565],
-    [-7.9368482258999595, 112.67512243871319],
-    [-7.941358235719524, 112.67013604607745],
-    [-7.940685087521296, 112.66265334474845],
-    [-7.942076948819757, 112.6555424479944],
-    [-7.939611350269796, 112.65383357900237],
-    [-7.936259176829228, 112.65531911245313],
-    [-7.937506892617456, 112.65819299365303],
-    [-7.937979854196419, 112.65914221601237],
-    [-7.938728078786892, 112.66125923921314],
-    [-7.940201961410049, 112.66124748741488],
-    [-7.93116074251041, 112.66417711204983],
-  ];
-
-  const branch1 = [
-    [-7.941358235719524, 112.67013604607745],
-    [-7.9372648563697155, 112.65285223741527],
-    [-7.935752031189624, 112.65120833667353],
-  ];
-
-  const branch2 = [
-    [-7.93116074251041, 112.66417711204983],
-    [-7.9376605829719065, 112.67452223651625],
-    [-7.93502926553001, 112.68385203667356],
-    [-7.940862091410173, 112.68453817829278],
-  ];
-
-  const branch3 = [
-    [-7.93116074251041, 112.66417711204983],
-    [-7.941645826513525, 112.68453102610313],
-  ];
-
-  const center = [-7.9375, 112.665];
+  const center = [-7.938, 112.667];
 
   // Schedule data
   const scheduleData = [
@@ -484,12 +542,23 @@ const RuteJadwal = () => {
               <div className="border-t border-gray-200">
                 {/* Info Banner */}
                 <div className="p-4 bg-linear-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-                  <div className="flex items-center justify-center gap-2">
-                    <Info className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">
-                      Klik marker untuk detail titik jemput • BINUS (T0) di
-                      kanan, Kvadra (T16) di kiri
-                    </span>
+                  <div className="flex items-center justify-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <svg width="24" height="32" viewBox="0 0 32 44">
+                        <rect x="14" y="28" width="4" height="16" fill="#9CA3AF"/>
+                        <circle cx="16" cy="14" r="12" fill="#DC2626" stroke="#B91C1C" strokeWidth="2"/>
+                        <rect x="8" y="8" width="16" height="10" rx="2" fill="white"/>
+                        <rect x="10" y="10" width="5" height="4" rx="1" fill="#DC2626"/>
+                        <rect x="17" y="10" width="5" height="4" rx="1" fill="#DC2626"/>
+                      </svg>
+                      <span className="text-sm font-medium text-red-700">Halte Bus</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Info className="w-5 h-5 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">
+                        Klik marker untuk detail
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -506,108 +575,83 @@ const RuteJadwal = () => {
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {/* Route Lines */}
-                    <Polyline
-                      positions={mainRoutePath}
-                      color="#3B82F6"
-                      weight={5}
-                      opacity={0.8}
-                      dashArray="15, 10"
-                    />
-                    <Polyline
-                      positions={branch1}
-                      color="#3B82F6"
-                      weight={5}
-                      opacity={0.8}
-                      dashArray="15, 10"
-                    />
-                    <Polyline
-                      positions={branch2}
-                      color="#3B82F6"
-                      weight={5}
-                      opacity={0.8}
-                      dashArray="15, 10"
-                    />
-                    <Polyline
-                      positions={branch3}
-                      color="#3B82F6"
-                      weight={5}
-                      opacity={0.8}
-                      dashArray="15, 10"
-                    />
-
-                    {/* Bus Stop Markers */}
+                    {/* Bus Stop Markers dengan Icon Halte */}
                     {busStops.map((stop) => (
-                      <CircleMarker
+                      <Marker
                         key={stop.id}
-                        center={stop.position}
-                        radius={
-                          stop.isMain
-                            ? 18
-                            : hoveredStop?.id === stop.id
-                            ? 15
-                            : 12
-                        }
-                        fillColor={stop.isMain ? "#F59E0B" : "#3B82F6"}
-                        fillOpacity={hoveredStop?.id === stop.id ? 1 : 0.9}
-                        color="white"
-                        weight={stop.isMain ? 4 : 3}
+                        position={stop.position}
+                        icon={createBusStopSignIcon(
+                          stop.id,
+                          stop.isMain,
+                          hoveredStop?.id === stop.id
+                        )}
                         eventHandlers={{
                           click: () => setSelectedStop(stop),
                           mouseover: () => setHoveredStop(stop),
                           mouseout: () => setHoveredStop(null),
                         }}
                       >
-                        <Tooltip
-                          permanent
-                          direction="top"
-                          offset={[0, -10]}
-                          className="custom-tooltip"
-                          opacity={1}
-                        >
-                          <span
-                            className={`font-bold text-xs ${
-                              stop.isMain ? "text-orange-600" : ""
-                            }`}
-                          >
-                            {stop.id}
-                          </span>
-                        </Tooltip>
-                        <Popup maxWidth={300}>
-                          <div className="p-2">
+                        <Popup maxWidth={320}>
+                          <div className="p-3">
                             <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
                               <div
                                 className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                  stop.isMain ? "bg-orange-500" : "bg-blue-500"
+                                  stop.isMain ? "bg-orange-500" : "bg-red-600"
                                 }`}
                               >
                                 {stop.id}
                               </div>
                               {stop.name}
                             </h3>
-                            <p className="text-sm text-gray-600 mb-2">
-                              {stop.fullName}
-                            </p>
+                            <p className="text-sm text-gray-600 mb-3">{stop.fullName}</p>
+                            
                             {stop.isMain && (
-                              <div className="mb-2 p-2 bg-orange-50 rounded border border-orange-200">
+                              <div className="mb-3 p-2 bg-orange-50 rounded border border-orange-200">
                                 <p className="text-xs font-bold text-orange-700">
                                   ⭐ TITIK UTAMA - Keberangkatan & Tujuan Akhir
                                 </p>
                               </div>
                             )}
+                            
+                            {/* Detail Info */}
+                            <div className="space-y-2 mb-3">
+                              <div className="flex items-start gap-2 text-sm">
+                                <span className="text-gray-500">🏢</span>
+                                <div>
+                                  <p className="font-semibold text-gray-700">Landmark</p>
+                                  <p className="text-gray-600">{stop.landmark}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2 text-sm">
+                                <span className="text-gray-500">📍</span>
+                                <div>
+                                  <p className="font-semibold text-gray-700">Deskripsi</p>
+                                  <p className="text-gray-600">{stop.description}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2 text-sm">
+                                <span className="text-gray-500">🕐</span>
+                                <div>
+                                  <p className="font-semibold text-gray-700">Jadwal</p>
+                                  <p className="text-gray-600">{stop.schedule}</p>
+                                </div>
+                              </div>
+                            </div>
+                            
                             <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded mb-2">
-                              <p className="font-semibold mb-1">
-                                📍 Koordinat GPS:
-                              </p>
+                              <p className="font-semibold mb-1">📍 Koordinat GPS:</p>
                               <p className="font-mono">
                                 Lat: {stop.position[0].toFixed(6)}
                                 <br />
                                 Lng: {stop.position[1].toFixed(6)}
                               </p>
                             </div>
+                            <div className="text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-700">
+                              🚌 Rute Gaskeunn
+                            </div>
                           </div>
                         </Popup>
-                      </CircleMarker>
+                      </Marker>
                     ))}
                   </MapContainer>
                 </div>
@@ -641,10 +685,12 @@ const RuteJadwal = () => {
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md ${
+                            className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md transition-all ${
+                              hoveredStop?.id === stop.id ? "scale-110" : ""
+                            } ${
                               stop.isMain
-                                ? "bg-orange-500"
-                                : "bg-blue-500"
+                                ? "bg-linear-to-br from-orange-500 to-orange-600"
+                                : "bg-linear-to-br from-red-500 to-red-600"
                             }`}
                           >
                             {stop.id}
@@ -666,50 +712,41 @@ const RuteJadwal = () => {
                     ))}
                   </div>
 
-                  {/* Route Summary */}
-                  <div className="rounded-xl p-6 bg-linear-to-br from-blue-50 to-blue-100 border-2 border-blue-400 shadow-md">
-                    <h4 className="font-bold text-blue-700 mb-3 flex items-center gap-2 text-lg">
-                      <div className="w-6 h-6 bg-blue-500 rounded-full shadow"></div>
-                      Rute Biru Gaskeunn
-                    </h4>
-                    <p className="text-sm text-blue-600 font-medium leading-relaxed mb-4">
-                      <span className="font-bold text-orange-600">
-                        🏫 BINUS University (Kanan)
-                      </span>{" "}
-                      → Tirtomoyo Security → Telaga Golf → Seberang KDS →
-                      Masjid Ramadhan → GPIB Getsemani → Bundaran PBI →
-                      Pujasera Nusantara → Bundaran Roket → Masjo Masakan Jawa
-                      → KDS → Djoglo/Djati Lounge
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div className="bg-white rounded-lg p-3 shadow">
-                        <p className="text-xs text-gray-500 mb-1">
-                          Total Titik
-                        </p>
-                        <p className="text-2xl font-bold text-blue-600">18</p>
+                  {/* Info Rute */}
+                  <div className="rounded-xl p-5 bg-linear-to-br from-red-50 to-red-100 border-2 border-red-400 shadow-md mb-6">
+                    <h3 className="font-bold text-red-700 mb-3 flex items-center gap-2 text-lg">
+                      <Bus className="w-5 h-5" />
+                      Informasi Rute Gaskeunn
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-red-600">
+                      <div>
+                        <p><span className="font-semibold">Titik Awal:</span> T0 BINUS University</p>
+                        <p><span className="font-semibold">Titik Akhir:</span> T0 BINUS University</p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 shadow">
-                        <p className="text-xs text-gray-500 mb-1">
-                          Estimasi Waktu
-                        </p>
-                        <p className="text-xl font-bold text-blue-600">
-                          ~45 menit
-                        </p>
+                      <div>
+                        <p><span className="font-semibold">Total Halte:</span> 18 titik jemput</p>
+                        <p><span className="font-semibold">Area:</span> Perumahan Araya, Malang</p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 shadow">
-                        <p className="text-xs text-gray-500 mb-1">
-                          Titik Utama
-                        </p>
-                        <p className="text-lg font-bold text-orange-600">
-                          T0 BINUS
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-3 shadow">
-                        <p className="text-xs text-gray-500 mb-1">Status</p>
-                        <p className="text-lg font-bold text-green-600">
-                          ✓ Aktif
-                        </p>
-                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="bg-white rounded-lg p-3 shadow">
+                      <p className="text-xs text-gray-500 mb-1">Total Titik</p>
+                      <p className="text-2xl font-bold text-blue-600">18</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow">
+                      <p className="text-xs text-gray-500 mb-1">Estimasi Waktu</p>
+                      <p className="text-2xl font-bold text-blue-600">~45 menit</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow">
+                      <p className="text-xs text-gray-500 mb-1">Titik Utama</p>
+                      <p className="text-lg font-bold text-orange-600">T0 BINUS</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 shadow">
+                      <p className="text-xs text-gray-500 mb-1">Status</p>
+                      <p className="text-lg font-bold text-green-600">✓ Aktif</p>
                     </div>
                   </div>
                 </div>
@@ -828,18 +865,11 @@ const RuteJadwal = () => {
           </div>
         </div>
 
-        {/* Custom CSS for tooltip */}
+        {/* Custom CSS for icon */}
         <style jsx>{`
-          .custom-tooltip {
+          .custom-bus-stop-sign-icon {
             background: transparent !important;
             border: none !important;
-            box-shadow: none !important;
-            font-weight: bold;
-            color: #1f2937;
-            text-shadow: 0 0 3px white, 0 0 3px white, 0 0 3px white;
-          }
-          .custom-tooltip::before {
-            display: none !important;
           }
           .leaflet-container {
             font-family: inherit;

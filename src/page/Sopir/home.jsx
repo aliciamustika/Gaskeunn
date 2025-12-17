@@ -304,7 +304,7 @@ const DriverScheduleTable = () => {
       day: "Senin",
       shift: "Full Day",
       time: "06:00 - 17:10",
-      route: "Rute Merah & Biru",
+      route: "Rute Biru",
       status: "active",
       trips: 5,
     },
@@ -312,7 +312,7 @@ const DriverScheduleTable = () => {
       day: "Selasa",
       shift: "Full Day",
       time: "06:00 - 17:10",
-      route: "Rute Merah & Biru",
+      route: "Rute Biru",
       status: "active",
       trips: 5,
     },
@@ -320,7 +320,7 @@ const DriverScheduleTable = () => {
       day: "Rabu",
       shift: "Full Day",
       time: "06:00 - 17:10",
-      route: "Rute Merah & Biru",
+      route: "Rute Biru",
       status: "active",
       trips: 5,
     },
@@ -328,7 +328,7 @@ const DriverScheduleTable = () => {
       day: "Kamis",
       shift: "Full Day",
       time: "06:00 - 17:10",
-      route: "Rute Merah & Biru",
+      route: "Rute Biru",
       status: "active",
       trips: 5,
     },
@@ -336,7 +336,7 @@ const DriverScheduleTable = () => {
       day: "Jumat",
       shift: "Full Day",
       time: "06:00 - 17:10",
-      route: "Rute Merah & Biru",
+      route: "Rute Biru",
       status: "active",
       trips: 5,
     },
@@ -344,7 +344,7 @@ const DriverScheduleTable = () => {
       day: "Sabtu",
       shift: "Full Day",
       time: "06:00 - 17:10",
-      route: "Rute Merah & Biru",
+      route: "Rute Biru",
       status: "active",
       trips: 5,
     },
@@ -515,7 +515,7 @@ const DriverScheduleTable = () => {
 };
 
 // BAGIAN 2: HOMEPAGE
-function Home({ userName = "Zayn Kaieran" }) {
+function Home({ userName = "Budi" }) {
   const [activeTab, setActiveTab] = useState("tickets");
   const [openFAQ, setOpenFAQ] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);

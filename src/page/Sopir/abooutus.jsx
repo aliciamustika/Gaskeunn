@@ -11,10 +11,13 @@ import {
 } from "lucide-react";
 import Navbar from "./navbar";
 import Footer from "../../components/footer";
-import Alicia from "../../assets/img/alicia.jpg";
+import Alicia from "../../assets/img/alic.jpeg";
 import Cheryl from "../../assets/img/cheryl.jpeg";
 import Kyoko from "../../assets/img/kyoko.jpg";
 import Saras from "../../assets/img/saras.jpeg";
+import Binus from "../../assets/img/BINUS-Malang.jpeg"; 
+import Binussamping from "../../assets/img/binus-samping.jpg";
+import HymneBinus from "../../assets/video/hymneb.mp4";
 
 function AboutUs() {
   const features = [
@@ -111,7 +114,7 @@ function AboutUs() {
         {/* Background Image with Overlay */}
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1920&h=600&fit=crop"
+            src= {Binussamping}
             alt="Team collaboration"
             className="w-full h-full object-cover opacity-40"
           />
@@ -201,7 +204,7 @@ function AboutUs() {
           {/* Left Image - Team Working */}
           <div className="relative rounded-3xl overflow-hidden shadow-2xl group">
             <img
-              src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&h=600&fit=crop"
+              src= {Binus}
               alt="Team working together"
               className="w-full h-96 object-cover transform group-hover:scale-105 transition-transform duration-700"
             />
@@ -211,7 +214,7 @@ function AboutUs() {
           {/* Right Image - Video Preview */}
           <div className="relative rounded-3xl overflow-hidden shadow-2xl group">
             <img
-              src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=600&fit=crop"
+              src= {HymneBinus}
               alt="Video presentation"
               className="w-full h-96 object-cover transform group-hover:scale-105 transition-transform duration-700"
             />
