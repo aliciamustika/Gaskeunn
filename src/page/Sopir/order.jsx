@@ -116,13 +116,6 @@ function DriverOrder() {
           label: "Selesai",
           icon: <CheckCircle className="w-4 h-4" />,
         };
-      case "cancelled":
-        return {
-          bg: "bg-red-100",
-          text: "text-red-800",
-          label: "Dibatalkan",
-          icon: <XCircle className="w-4 h-4" />,
-        };
       default:
         return {
           bg: "bg-gray-100",
@@ -432,15 +425,6 @@ function DriverOrder() {
                                       >
                                         <Clock className="w-4 h-4" />
                                         Jemput
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          updateStatus(passenger.id, "cancelled")
-                                        }
-                                        className="flex-1 lg:w-full px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium text-sm hover:bg-red-200 transition-colors flex items-center justify-center gap-2"
-                                      >
-                                        <XCircle className="w-4 h-4" />
-                                        Batal
                                       </button>
                                     </>
                                   )}

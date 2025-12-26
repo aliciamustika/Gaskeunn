@@ -99,8 +99,6 @@ function Notification() {
   return (
     <>
       <div className="min-h-screen bg-linear-to-br from-slate-50 via-orange-50 to-amber-50">
-        <Navbar />
-
         <div className="min-h-screen bg-gray-50">
           {/* Header Section */}
           <div className="bg-linear-to-r from-[oklch(0.6155_0.1314_243.17)] to-[oklch(0.7_0.12_243.17)] text-white">

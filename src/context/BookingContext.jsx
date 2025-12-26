@@ -1,359 +1,433 @@
-// context/BookingContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const BookingContext = createContext();
 
-// ============================================
-// STORAGE KEYS
-// ============================================
-const STORAGE_KEYS = {
-  BOOKINGS: 'gaskeunn_bookings',
-  PASSENGERS: 'gaskeunn_passengers',
-  TRANSACTIONS: 'gaskeunn_transactions'
-};
-
-// Generate unique booking code
-const generateBookingCode = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = 'GSK';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+export const useBooking = () => {
+  const context = useContext(BookingContext);
+  if (!context) {
+    throw new Error('useBooking must be used within a BookingProvider');
   }
-  return code;
+  return context;
 };
 
-// Generate random seat number
-const generateSeatNumber = () => {
-  return Math.floor(Math.random() * 40) + 1;
-};
+export const BookingProvider = ({ children }) => {
+  // Initialize bookings from localStorage or empty array
+  const [bookings, setBookings] = useState(() => {
+    const savedBookings = localStorage.getItem('gaskeunn_bookings');
+    return savedBookings ? JSON.parse(savedBookings) : [];
+  });
 
-// Generate random bus number
-const generateBusNumber = () => {
-  return Math.floor(Math.random() * 3) + 1;
-};
-
-// Get arrival time based on departure time
-const getArrivalTime = (departureTime) => {
-  const timeMap = {
-    "6:00": "7:10",
-    "8:00": "9:10",
-    "10:00": "11:10",
-    "12:00": "13:10",
-    "14:00": "15:10",
-    "16:00": "17:10",
-  };
-  return timeMap[departureTime] || "7:10";
-};
-
-// Format time to 12-hour format
-const formatTimeTo12Hour = (time) => {
-  const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes || '00'} ${ampm}`;
-};
-
-// Parse date string to Date object
-const parseDate = (dateStr) => {
-  // Handle format: "19 December 2025"
-  const months = {
-    'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
-    'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
-  };
-  
-  const parts = dateStr.split(' ');
-  if (parts.length === 3) {
-    const day = parseInt(parts[0]);
-    const month = months[parts[1]];
-    const year = parseInt(parts[2]);
-    return new Date(year, month, day);
-  }
-  return new Date(dateStr);
-};
-
-// Check if date is today
-const isToday = (dateStr) => {
-  const ticketDate = parseDate(dateStr);
-  const today = new Date();
-  return ticketDate.getDate() === today.getDate() &&
-         ticketDate.getMonth() === today.getMonth() &&
-         ticketDate.getFullYear() === today.getFullYear();
-};
-
-// Check if date is in the past
-const isPastDate = (dateStr) => {
-  const ticketDate = parseDate(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  ticketDate.setHours(0, 0, 0, 0);
-  return ticketDate < today;
-};
-
-export function BookingProvider({ children }) {
-  const [bookings, setBookings] = useState([]);
-  const [userInfo, setUserInfo] = useState(null);
-
-  // Load bookings from localStorage on mount
+  // Save to localStorage whenever bookings change
   useEffect(() => {
-    const savedBookings = localStorage.getItem(STORAGE_KEYS.BOOKINGS);
-    if (savedBookings) {
-      setBookings(JSON.parse(savedBookings));
-    }
-
-    // Load user info
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUserInfo(JSON.parse(savedUser));
-    }
-  }, []);
-
-  // Save bookings to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
-    
-    // Also update transactions for admin dashboard
-    updateTransactionsForAdmin(bookings);
+    localStorage.setItem('gaskeunn_bookings', JSON.stringify(bookings));
   }, [bookings]);
 
-  // ============================================
-  // SYNC DATA TO ADMIN DASHBOARD
-  // ============================================
-  const updateTransactionsForAdmin = (bookingsList) => {
-    const transactions = bookingsList.map(booking => ({
-      id: booking.id,
-      bookingCode: booking.bookingCode,
-      passengerName: booking.passenger.name,
-      passengerEmail: booking.passenger.email,
-      passengerNim: booking.passenger.nim,
-      passengerBinusianId: booking.passenger.binusianId,
-      departure: booking.departure,
-      arrival: booking.arrival,
-      bus: booking.bus,
-      seat: booking.seat,
-      status: booking.status,
-      totalPrice: booking.totalPrice,
-      paymentMethod: booking.paymentMethod,
-      promoCode: booking.promoCode,
-      createdAt: booking.createdAt,
-      updatedAt: booking.updatedAt
-    }));
+  // Check and expire pending bookings + auto-complete ongoing bookings
+  const checkBookingStatus = useCallback(() => {
+    const now = new Date().getTime();
+    setBookings(prev => 
+      prev.map(booking => {
+        // Auto-expire pending bookings after payment deadline
+        if (booking.status === 'pending' && booking.paymentDeadline) {
+          const deadline = new Date(booking.paymentDeadline).getTime();
+          if (now > deadline) {
+            return { ...booking, status: 'expired', hasBarcode: false };
+          }
+        }
+        // Auto-complete ongoing bookings after completion deadline
+        // Only if the journey has actually started (current time >= departure time)
+        if (booking.status === 'ongoing' && booking.completionDeadline) {
+          // Parse departure time
+          const departureDateTime = parseDepartureDateTime(booking.departure.date, booking.departure.time);
+          const departureTime = departureDateTime.getTime();
+          
+          // Only check completion if journey has started
+          if (now >= departureTime) {
+            const deadline = new Date(booking.completionDeadline).getTime();
+            if (now > deadline) {
+              return { 
+                ...booking, 
+                status: 'completed', 
+                hasBarcode: false,
+                completedAt: new Date().toISOString(),
+              };
+            }
+          }
+        }
+        return booking;
+      })
+    );
+  }, []);
+
+  // Check booking status every 10 seconds
+  useEffect(() => {
+    checkBookingStatus();
+    const interval = setInterval(checkBookingStatus, 10000);
+    return () => clearInterval(interval);
+  }, [checkBookingStatus]);
+
+  // Get user data from localStorage
+  const getUserData = () => {
+    const user = JSON.parse(localStorage.getItem('user')) || {};
+    return {
+      name: user.name || "Ni Putu Saraswati",
+      email: user.email || "ni.saraswati@binus.ac.id",
+      binusianId: user.binusianId || "BN138092583",
+      nim: user.nim || "2902654051",
+    };
+  };
+
+  // Generate booking code
+  const generateBookingCode = () => {
+    const prefix = "GAS";
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}${timestamp}${random}`.substring(0, 12);
+  };
+
+  // Generate random bus and seat
+  const generateBusSeat = () => {
+    const bus = Math.floor(Math.random() * 3) + 1;
+    const seat = Math.floor(Math.random() * 20) + 1;
+    return { bus, seat };
+  };
+
+  // Calculate arrival time based on departure
+  const calculateArrivalTime = (departureTime) => {
+    const [hours, minutes] = departureTime.split(':').map(Number);
+    let arrivalHours = hours + 1;
+    let arrivalMinutes = minutes + 10;
     
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    if (arrivalMinutes >= 60) {
+      arrivalHours += 1;
+      arrivalMinutes -= 60;
+    }
+    
+    return `${arrivalHours.toString().padStart(2, '0')}:${arrivalMinutes.toString().padStart(2, '0')}`;
+  };
+
+  // Helper function to parse departure date and time to Date object
+  const parseDepartureDateTime = (dateStr, timeStr) => {
+    // Parse date like "19 December 2025"
+    const months = {
+      'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
+      'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
+    };
+    
+    const dateParts = dateStr.split(' ');
+    const day = parseInt(dateParts[0]);
+    const month = months[dateParts[1]];
+    const year = parseInt(dateParts[2]);
+    
+    // Parse time like "16:00" or "6:00"
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    
+    return new Date(year, month, day, hours, minutes || 0, 0, 0);
+  };
+
+  // Calculate completion deadline based on departure time + 10 minutes
+  const calculateCompletionDeadline = (departureDate, departureTime) => {
+    const departureDateTime = parseDepartureDateTime(departureDate, departureTime);
+    // Completion deadline = departure time + 10 minutes
+    return new Date(departureDateTime.getTime() + 10 * 60 * 1000).toISOString();
   };
 
   // Create new booking
   const createBooking = (bookingData) => {
-    const user = JSON.parse(localStorage.getItem('user')) || {
-      name: 'Ni Putu Saraswati',
-      email: 'ni.saraswati@binus.ac.id',
-      nim: '2902654051',
-      binusianId: 'BN138092583'
-    };
-
+    const userData = getUserData();
+    const { bus, seat } = generateBusSeat();
+    const bookingCode = generateBookingCode();
+    const payNow = bookingData.payNow !== false; // default to pay now
+    
+    // Calculate payment deadline (10 minutes from now) if paying later
+    const paymentDeadline = !payNow 
+      ? new Date(Date.now() + 10 * 60 * 1000).toISOString() 
+      : null;
+    
+    // Calculate completion deadline based on DEPARTURE TIME + 10 minutes (not booking time)
+    // This means the 10-minute countdown starts when the bus departs
+    const completionDeadline = payNow 
+      ? calculateCompletionDeadline(bookingData.departureDate, bookingData.departureTime)
+      : null;
+    
     const newBooking = {
-      id: Date.now(),
-      bookingCode: generateBookingCode(),
-      status: 'ongoing', // ongoing, completed, cancelled, pending
-      
-      // Journey details
+      id: Date.now().toString(),
+      bookingCode,
+      status: payNow ? 'ongoing' : 'pending',
       departure: {
-        time: formatTimeTo12Hour(bookingData.departureTime),
+        time: bookingData.departureTime,
         date: bookingData.departureDate,
-        location: bookingData.departure
+        location: bookingData.departure,
       },
       arrival: {
-        time: formatTimeTo12Hour(getArrivalTime(bookingData.departureTime)),
+        time: calculateArrivalTime(bookingData.departureTime),
         date: bookingData.departureDate,
-        location: bookingData.destination
+        location: bookingData.destination,
       },
-      
-      // Passenger info
       passenger: {
-        name: user.name || 'Ni Putu Saraswati',
-        email: user.email || 'ni.saraswati@binus.ac.id',
-        binusianId: user.binusianId || 'BN138092583',
-        nim: user.nim || '2902654051'
+        name: userData.name,
+        email: userData.email,
+        binusianId: userData.binusianId,
+        nim: userData.nim,
       },
-      
-      // Seat info
-      bus: generateBusNumber(),
-      seat: generateSeatNumber(),
-      
-      // Additional info
-      duration: '70 min',
-      stops: '2 stops',
-      hasBarcode: true,
-      
-      // Payment info
-      totalPrice: bookingData.totalPrice || 5000,
-      paymentMethod: bookingData.paymentMethod || 'qris',
-      promoCode: bookingData.promoCode || null,
-      
-      // Timestamps
+      bus,
+      seat,
+      duration: "70 min",
+      stops: "3 stops",
+      totalPrice: bookingData.totalPrice,
+      paymentMethod: bookingData.paymentMethod,
+      promoCode: bookingData.promoCode,
+      hasBarcode: payNow,
+      isPaid: payNow,
+      paymentDeadline,
+      completionDeadline,
+      paidAt: payNow ? new Date().toISOString() : null,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
     };
 
     setBookings(prev => [newBooking, ...prev]);
     return newBooking;
   };
 
-  // Cancel booking
+  // Cancel booking (without refund - for unpaid tickets)
   const cancelBooking = (bookingId) => {
-    setBookings(prev => prev.map(booking => 
-      booking.id === bookingId 
-        ? { ...booking, status: 'cancelled', hasBarcode: false, updatedAt: new Date().toISOString() }
-        : booking
-    ));
+    setBookings(prev => 
+      prev.map(booking => 
+        booking.id === bookingId 
+          ? { ...booking, status: 'cancelled', hasBarcode: false }
+          : booking
+      )
+    );
   };
 
-  // Complete booking (after journey is done)
+  // Cancel booking with refund (for paid tickets)
+  const cancelWithRefund = (bookingId) => {
+    setBookings(prev => 
+      prev.map(booking => {
+        if (booking.id === bookingId) {
+          return { 
+            ...booking, 
+            status: 'refunded', 
+            hasBarcode: false,
+            refundedAt: new Date().toISOString(),
+            refundAmount: booking.totalPrice,
+          };
+        }
+        return booking;
+      })
+    );
+  };
+
+  // Complete booking
   const completeBooking = (bookingId) => {
-    setBookings(prev => prev.map(booking => 
-      booking.id === bookingId 
-        ? { ...booking, status: 'completed', hasBarcode: false, updatedAt: new Date().toISOString() }
-        : booking
-    ));
+    setBookings(prev => 
+      prev.map(booking => 
+        booking.id === bookingId 
+          ? { ...booking, status: 'completed', hasBarcode: false }
+          : booking
+      )
+    );
   };
 
-  // Get today's tickets (for Home - My Tickets section)
+  // Confirm payment (change from pending to ongoing)
+  const confirmPayment = (bookingId) => {
+    setBookings(prev => 
+      prev.map(booking => {
+        if (booking.id === bookingId) {
+          // Calculate completion deadline based on DEPARTURE TIME + 10 minutes
+          const completionDeadline = calculateCompletionDeadline(
+            booking.departure.date, 
+            booking.departure.time
+          );
+          
+          return { 
+            ...booking, 
+            status: 'ongoing', 
+            hasBarcode: true, 
+            isPaid: true,
+            paidAt: new Date().toISOString(),
+            paymentDeadline: null,
+            completionDeadline,
+          };
+        }
+        return booking;
+      })
+    );
+  };
+
+  // Get remaining time for payment (in seconds)
+  const getRemainingPaymentTime = (bookingId) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking || !booking.paymentDeadline || booking.status !== 'pending') {
+      return 0;
+    }
+    const deadline = new Date(booking.paymentDeadline).getTime();
+    const now = new Date().getTime();
+    const remaining = Math.max(0, Math.floor((deadline - now) / 1000));
+    return remaining;
+  };
+
+  // Get remaining time for completion (in seconds)
+  // Returns: 
+  //   - positive number: seconds remaining in 10-min countdown (journey started)
+  //   - 0: journey completed
+  //   - negative number: seconds until departure (journey not started yet, absolute value = seconds to wait)
+  const getRemainingCompletionTime = (bookingId) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking || !booking.completionDeadline || booking.status !== 'ongoing') {
+      return 0;
+    }
+    
+    const now = new Date().getTime();
+    const deadline = new Date(booking.completionDeadline).getTime();
+    
+    // Parse departure time to check if journey has started
+    const departureDateTime = parseDepartureDateTime(booking.departure.date, booking.departure.time);
+    const departureTime = departureDateTime.getTime();
+    
+    // If current time is before departure time, return negative value (waiting for departure)
+    if (now < departureTime) {
+      // Return negative value representing seconds until departure
+      return -Math.floor((departureTime - now) / 1000);
+    }
+    
+    // Journey has started, return remaining time in 10-min countdown
+    const remaining = Math.max(0, Math.floor((deadline - now) / 1000));
+    return remaining;
+  };
+
+  // Check if journey has started (current time >= departure time)
+  const hasJourneyStarted = (bookingId) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    if (!booking || booking.status !== 'ongoing') {
+      return false;
+    }
+    
+    const now = new Date().getTime();
+    const departureDateTime = parseDepartureDateTime(booking.departure.date, booking.departure.time);
+    return now >= departureDateTime.getTime();
+  };
+
+  // Get today's date string
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  // Get today's tickets (ongoing or pending for today)
   const getTodayTickets = () => {
+    const todayString = getTodayDateString();
     return bookings.filter(booking => 
-      isToday(booking.departure.date) && 
+      booking.departure.date === todayString && 
       (booking.status === 'ongoing' || booking.status === 'pending')
     );
   };
 
-  // Get all tickets (for History)
-  const getAllTickets = () => {
-    // Auto-complete past tickets
-    const updatedBookings = bookings.map(booking => {
-      if (isPastDate(booking.departure.date) && booking.status === 'ongoing') {
-        return { ...booking, status: 'completed', hasBarcode: false };
-      }
-      return booking;
+  // Get next upcoming ticket (closest to current time, today only, 1 ticket)
+  const getNextUpcomingTicket = () => {
+    const todayString = getTodayDateString();
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Filter today's active tickets (ongoing or pending)
+    const todayTickets = bookings.filter(booking => 
+      booking.departure.date === todayString && 
+      (booking.status === 'ongoing' || booking.status === 'pending')
+    );
+
+    if (todayTickets.length === 0) return null;
+
+    // Convert departure time to minutes for comparison
+    const getTimeInMinutes = (timeStr) => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + (minutes || 0);
+    };
+
+    // Sort tickets by departure time
+    const sortedTickets = todayTickets.sort((a, b) => {
+      const timeA = getTimeInMinutes(a.departure.time);
+      const timeB = getTimeInMinutes(b.departure.time);
+      return timeA - timeB;
     });
 
-    // Update if there are changes
-    if (JSON.stringify(updatedBookings) !== JSON.stringify(bookings)) {
-      setBookings(updatedBookings);
+    // Find the next upcoming ticket (departure time >= current time)
+    // Or if all tickets are past, return the most recent one (ongoing trip)
+    let nextTicket = sortedTickets.find(ticket => {
+      const departureMinutes = getTimeInMinutes(ticket.departure.time);
+      return departureMinutes >= currentMinutes;
+    });
+
+    // If no upcoming ticket found, check for ongoing tickets (already departed but still active)
+    if (!nextTicket) {
+      // Return the last ongoing ticket (most recently departed)
+      const ongoingTickets = sortedTickets.filter(t => t.status === 'ongoing');
+      if (ongoingTickets.length > 0) {
+        nextTicket = ongoingTickets[ongoingTickets.length - 1];
+      } else {
+        // Return the closest pending ticket even if time has passed
+        nextTicket = sortedTickets[0];
+      }
     }
 
-    return updatedBookings;
+    return nextTicket;
   };
 
-  // Get booking by ID
-  const getBookingById = (bookingId) => {
-    return bookings.find(booking => booking.id === parseInt(bookingId));
+  // Get all tickets
+  const getAllTickets = () => {
+    return bookings;
   };
 
-  // Filter tickets by status
+  // Get tickets by status
   const getTicketsByStatus = (status) => {
-    if (status === 'all') return getAllTickets();
-    return getAllTickets().filter(booking => booking.status === status);
+    if (status === 'all') return bookings;
+    return bookings.filter(booking => booking.status === status);
+  };
+
+  // Get ticket by ID
+  const getTicketById = (ticketId) => {
+    return bookings.find(booking => booking.id === ticketId);
+  };
+
+  // Get booking statistics
+  const getBookingStats = () => {
+    return {
+      total: bookings.length,
+      pending: bookings.filter(b => b.status === 'pending').length,
+      ongoing: bookings.filter(b => b.status === 'ongoing').length,
+      completed: bookings.filter(b => b.status === 'completed').length,
+      cancelled: bookings.filter(b => b.status === 'cancelled').length,
+      refunded: bookings.filter(b => b.status === 'refunded').length,
+      expired: bookings.filter(b => b.status === 'expired').length,
+    };
   };
 
   // Clear all bookings (for testing)
   const clearAllBookings = () => {
     setBookings([]);
-    localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
-    localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
-  };
-
-  // ============================================
-  // ADMIN FUNCTIONS
-  // ============================================
-  
-  // Get all transactions for admin
-  const getAdminTransactions = () => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    return saved ? JSON.parse(saved) : [];
-  };
-
-  // Get transaction statistics for admin dashboard
-  const getTransactionStats = () => {
-    const allBookings = getAllTickets();
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todayBookings = allBookings.filter(b => {
-      const bookingDate = parseDate(b.departure.date);
-      bookingDate.setHours(0, 0, 0, 0);
-      return bookingDate.getTime() === today.getTime();
-    });
-
-    const totalRevenue = allBookings
-      .filter(b => b.status === 'completed' || b.status === 'ongoing')
-      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-
-    const todayRevenue = todayBookings
-      .filter(b => b.status === 'completed' || b.status === 'ongoing')
-      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-
-    return {
-      totalBookings: allBookings.length,
-      todayBookings: todayBookings.length,
-      completedBookings: allBookings.filter(b => b.status === 'completed').length,
-      ongoingBookings: allBookings.filter(b => b.status === 'ongoing').length,
-      cancelledBookings: allBookings.filter(b => b.status === 'cancelled').length,
-      pendingBookings: allBookings.filter(b => b.status === 'pending').length,
-      totalRevenue,
-      todayRevenue
-    };
-  };
-
-  // Update booking status (for admin)
-  const updateBookingStatus = (bookingId, newStatus) => {
-    setBookings(prev => prev.map(booking => 
-      booking.id === bookingId 
-        ? { ...booking, status: newStatus, hasBarcode: newStatus === 'ongoing', updatedAt: new Date().toISOString() }
-        : booking
-    ));
-  };
-
-  // Get bookings by date range (for admin reports)
-  const getBookingsByDateRange = (startDate, endDate) => {
-    return getAllTickets().filter(booking => {
-      const bookingDate = parseDate(booking.departure.date);
-      return bookingDate >= startDate && bookingDate <= endDate;
-    });
-  };
-
-  // Get popular routes (for admin analytics)
-  const getPopularRoutes = () => {
-    const allBookings = getAllTickets();
-    const routeCount = {};
-    
-    allBookings.forEach(booking => {
-      const route = `${booking.departure.location} → ${booking.arrival.location}`;
-      routeCount[route] = (routeCount[route] || 0) + 1;
-    });
-
-    return Object.entries(routeCount)
-      .map(([route, count]) => ({ route, count }))
-      .sort((a, b) => b.count - a.count);
+    localStorage.removeItem('gaskeunn_bookings');
   };
 
   const value = {
     bookings,
     createBooking,
     cancelBooking,
+    cancelWithRefund,
     completeBooking,
+    confirmPayment,
+    getRemainingPaymentTime,
+    getRemainingCompletionTime,
+    hasJourneyStarted,
     getTodayTickets,
+    getNextUpcomingTicket,
     getAllTickets,
-    getBookingById,
     getTicketsByStatus,
+    getTicketById,
+    getBookingStats,
     clearAllBookings,
-    isToday,
-    isPastDate,
-    // Admin functions
-    getAdminTransactions,
-    getTransactionStats,
-    updateBookingStatus,
-    getBookingsByDateRange,
-    getPopularRoutes
   };
 
   return (
@@ -361,15 +435,6 @@ export function BookingProvider({ children }) {
       {children}
     </BookingContext.Provider>
   );
-}
-
-// Custom hook to use booking context
-export function useBooking() {
-  const context = useContext(BookingContext);
-  if (!context) {
-    throw new Error('useBooking must be used within a BookingProvider');
-  }
-  return context;
-}
+};
 
 export default BookingContext;

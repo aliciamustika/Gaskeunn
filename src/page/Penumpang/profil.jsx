@@ -32,7 +32,7 @@ function Profile() {
       homeCampus: 'Malang',
       stream: 'Software Engineering',
       enrichmentTrack: 'Artificial Intelligence',
-      class: 'L1BC'
+      class: 'LA20'
     }
   });
 
@@ -105,7 +105,7 @@ function Profile() {
         <div className="w-full bg-white flex flex-col lg:flex-row">
           
           {/* Left Side - Blue Banner */}
-          <div className="lg:w-1/4 xl:w-1/5 bg-gradient-to-b from-blue-600 to-blue-700 p-6 lg:p-8 relative overflow-hidden lg:min-h-[calc(100vh-64px)]">
+          <div className="lg:w-1/4 xl:w-1/5 bg-linear-to-b from-blue-600 to-blue-700 p-6 lg:p-8 relative overflow-hidden lg:min-h-[calc(100vh-64px)]">
             {/* Decorative curves */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/30 rounded-full -mr-24 -mt-24"></div>
             <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full -mr-16 -mb-16"></div>
@@ -129,7 +129,7 @@ function Profile() {
                     {profileImage ? (
                       <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-300 to-gray-400">
+                      <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-gray-300 to-gray-400">
                         <User className="w-12 h-12 lg:w-16 lg:h-16 text-gray-500" />
                       </div>
                     )}
@@ -210,7 +210,7 @@ function Profile() {
             </div>
 
             {/* Personal Information Section */}
-            <div className="mb-10">
+            <div className="mb-10 text-left">
               <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-3">
                 <div className="w-1.5 h-7 bg-blue-600 rounded-full"></div>
                 Personal Information
@@ -218,7 +218,7 @@ function Profile() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {/* Birth Information */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Cake className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -238,7 +238,7 @@ function Profile() {
 
                 {/* Email */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Mail className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -249,7 +249,7 @@ function Profile() {
 
                 {/* LinkedIn */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Linkedin className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -276,7 +276,7 @@ function Profile() {
 
                 {/* Gender */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <User className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -298,7 +298,7 @@ function Profile() {
 
                 {/* Phone Number */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Phone className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -319,7 +319,7 @@ function Profile() {
             </div>
 
             {/* Academic Information Section */}
-            <div>
+            <div className='text-left'>
               <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-3">
                 <div className="w-1.5 h-7 bg-green-600 rounded-full"></div>
                 Academic Information
@@ -327,7 +327,7 @@ function Profile() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {/* Binusian ID */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <FileText className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -338,7 +338,7 @@ function Profile() {
 
                 {/* Program */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <BookOpen className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -349,7 +349,7 @@ function Profile() {
 
                 {/* Degree Title */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <GraduationCap className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -360,7 +360,7 @@ function Profile() {
 
                 {/* Home Campus */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Home className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -371,7 +371,7 @@ function Profile() {
 
                 {/* Stream */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <BookOpen className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -382,7 +382,7 @@ function Profile() {
 
                 {/* Enrichment Track */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Lightbulb className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -393,7 +393,7 @@ function Profile() {
 
                 {/* Class */}
                 <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Users className="w-6 h-6 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">

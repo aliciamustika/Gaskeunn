@@ -14,7 +14,28 @@ const USERS = [
     email: 'ni.saraswati@binus.ac.id',
     password: '11223344',
     role: 'penumpang',
-    name: 'Ni Putu Saraswati',
+    name: 'Ni Saraswati',
+    redirectTo: '/home'
+  },
+  {
+    email: 'verena.cheryl@binus.ac.id',
+    password: '11223344',
+    role: 'penumpang',
+    name: 'Verena cheryl',
+    redirectTo: '/home'
+  },
+  {
+    email: 'kyoko.angela@binus.ac.id',
+    password: '11223344',
+    role: 'penumpang',
+    name: 'Kyoko Angela',
+    redirectTo: '/home'
+  },
+  {
+    email: 'alicia.mustika@binus.ac.id',
+    password: '11223344',
+    role: 'penumpang',
+    name: 'Alicia Mustika',
     redirectTo: '/home'
   },
   {

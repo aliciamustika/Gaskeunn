@@ -5,7 +5,7 @@ import { BellRing } from 'lucide-react';
 import Gaskeunn from '../../assets/img/Gaskeunn.png'
 
 const navItems = [
-    { name: 'Home', path: '/home'},
+    { name: 'Home', path: '/homesopir'},
     { name: 'Order', path: '/order'},
     { name: 'Route & Schedule', path: '/routeschedulesopir'},
     { name: 'News', path: '/newssopir'},

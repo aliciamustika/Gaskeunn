@@ -51,7 +51,7 @@ function DetailTicket() {
               </div>
               
               {/* Booking Code */}
-              <p className="text-gray-500 text-sm mb-1">Booking Code</p>
+              <p className="text-gray-500 text-sm mb-1">Ticket Code</p>
               <p className="text-2xl font-bold text-gray-900 mb-6">{ticketData.bookingCode}</p>
               
               {/* Instruction */}

@@ -199,7 +199,7 @@ function Profile() {
             </div>
 
             {/* Personal Information Section */}
-            <div className="mb-10">
+            <div className="mb-10 text-left">
               <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-3">
                 <div className="w-1.5 h-7 bg-blue-600 rounded-full"></div>
                 Personal Information

@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useReviews } from "../../context/ReviewContext"; 
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import Navbar from "./navbar";
 import Footer from "../../components/footer";
 import { useBooking } from "../../context/BookingContext";
@@ -18,8 +22,90 @@ import { IoIosInformationCircle } from "react-icons/io";
 import { FaPhone } from "react-icons/fa";
 import { 
   Ticket, Newspaper, Clock, Monitor, MapPin, Calendar, Package, 
-  X, Check, CreditCard, Star, ChevronLeft, ChevronRight 
+  X, Check, CreditCard, Star, ChevronLeft, ChevronRight,
+  Phone, MessageCircle, Bus as BusIcon, CheckCircle, Navigation
 } from "lucide-react";
+
+// Fix default marker icon issue with Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
+
+// Custom Bus Icon for map
+const createBusIcon = () => {
+  return L.divIcon({
+    html: `
+      <div style="background: oklch(0.805 0.1545 76.47); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 6v6"></path>
+          <path d="M15 6v6"></path>
+          <path d="M2 12h19.6"></path>
+          <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"></path>
+          <circle cx="7" cy="18" r="2"></circle>
+          <path d="M9 18h5"></path>
+          <circle cx="16" cy="18" r="2"></circle>
+        </svg>
+      </div>
+    `,
+    className: "custom-bus-icon",
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+  });
+};
+
+// Custom Halte Icon
+const createHalteIcon = (isStart = false) => {
+  const color = isStart ? "#22c55e" : "oklch(0.805 0.1545 76.47)";
+  return L.divIcon({
+    html: `
+      <div style="background: ${color}; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+        <div style="width: 8px; height: 8px; background: white; border-radius: 50%;"></div>
+      </div>
+    `,
+    className: "custom-halte-icon",
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
+// Component to animate bus position
+const AnimatedBusMarker = ({ route, progress }) => {
+  const map = useMap();
+  const [position, setPosition] = useState(route[0]);
+
+  useEffect(() => {
+    if (route.length < 2) return;
+    
+    const totalDistance = route.reduce((acc, point, i) => {
+      if (i === 0) return 0;
+      const prev = route[i - 1];
+      return acc + Math.sqrt(Math.pow(point[0] - prev[0], 2) + Math.pow(point[1] - prev[1], 2));
+    }, 0);
+
+    const targetDistance = totalDistance * (progress / 100);
+    let currentDistance = 0;
+
+    for (let i = 1; i < route.length; i++) {
+      const prev = route[i - 1];
+      const curr = route[i];
+      const segmentDistance = Math.sqrt(Math.pow(curr[0] - prev[0], 2) + Math.pow(curr[1] - prev[1], 2));
+
+      if (currentDistance + segmentDistance >= targetDistance) {
+        const ratio = (targetDistance - currentDistance) / segmentDistance;
+        const lat = prev[0] + (curr[0] - prev[0]) * ratio;
+        const lng = prev[1] + (curr[1] - prev[1]) * ratio;
+        setPosition([lat, lng]);
+        break;
+      }
+      currentDistance += segmentDistance;
+    }
+  }, [progress, route]);
+
+  return <Marker position={position} icon={createBusIcon()} />;
+};
 
 // Image Gallery Component
 const images = [
@@ -74,7 +160,8 @@ const ImageGallery = () => {
 
 function Home() {
   const navigate = useNavigate();
-  const { getTodayTickets, getAllTickets, cancelBooking } = useBooking();
+  const { getNextUpcomingTicket, getAllTickets, cancelBooking } = useBooking();
+  const { getHomeReviews } = useReviews();
   
   const [activeTab, setActiveTab] = useState("tickets");
   const [openFAQ, setOpenFAQ] = useState(null);
@@ -82,22 +169,25 @@ function Home() {
   const [historyFilter, setHistoryFilter] = useState("all");
   const testimonialRef = useRef(null);
 
+  // Tracking Popup State
+  const [showTrackingPopup, setShowTrackingPopup] = useState(false);
+  const [selectedTicketForTracking, setSelectedTicketForTracking] = useState(null);
+  const [busProgress, setBusProgress] = useState(25);
+  const [trackingStatus, setTrackingStatus] = useState(1); // 1: menuju lokasi, 2: dalam perjalanan, 3: sampai
+
   // Get user name from localStorage
   const user = JSON.parse(localStorage.getItem('user')) || {};
-  // Untuk penumpang dengan nama "Ni Putu Saraswati", ambil nama kedua atau ketiga
-  // Untuk admin, ambil nama pertama
   const getDisplayName = () => {
     if (!user.name) return "Binusian";
     const nameParts = user.name.split(' ');
     if (user.role === 'admin') {
-      return nameParts[0]; // Admin
+      return nameParts[0];
     }
-    // Untuk penumpang, coba ambil nama yang lebih personal (bukan "Ni" atau "I")
     if (nameParts.length >= 3 && (nameParts[0].toLowerCase() === 'ni' || nameParts[0].toLowerCase() === 'i')) {
-      return nameParts[2]; // Saraswati
+      return nameParts[2];
     }
     if (nameParts.length >= 2) {
-      return nameParts[1]; // Putu
+      return nameParts[1];
     }
     return nameParts[0];
   };
@@ -107,6 +197,307 @@ function Home() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Simulate bus movement
+  useEffect(() => {
+    if (showTrackingPopup && trackingStatus < 3) {
+      const interval = setInterval(() => {
+        setBusProgress(prev => {
+          const newProgress = prev + 2;
+          if (newProgress >= 50 && trackingStatus === 1) {
+            setTrackingStatus(2);
+          }
+          if (newProgress >= 100) {
+            setTrackingStatus(3);
+            clearInterval(interval);
+            return 100;
+          }
+          return newProgress;
+        });
+      }, 300);
+      return () => clearInterval(interval);
+    }
+  }, [showTrackingPopup, trackingStatus]);
+
+  // Driver data
+  const driverData = {
+    name: "Pak Budi Santoso",
+    photo: "https://ui-avatars.com/api/?name=Budi+Santoso&background=3b82f6&color=fff&size=128",
+    role: "Driver",
+    rating: 4.9,
+    phone: "+6281234567890",
+    totalTrips: 1250,
+    busNumber: "B 1234 XYZ",
+  };
+
+  // Route coordinates (Araya to BINUS)
+  const routeCoordinates = [
+    [-7.9368482258999595, 112.67512243871319],
+    [-7.937506892617456, 112.65819299365303],
+    [-7.938728078786892, 112.66125923921314],
+    [-7.939326456906397, 112.68104383601565],
+  ];
+
+  // Handle ticket click for tracking
+  const handleTicketClick = (ticket) => {
+    setSelectedTicketForTracking(ticket);
+    setShowTrackingPopup(true);
+    setBusProgress(25);
+    setTrackingStatus(1);
+  };
+
+  // Close tracking popup
+  const closeTrackingPopup = () => {
+    setShowTrackingPopup(false);
+    setSelectedTicketForTracking(null);
+    setBusProgress(25);
+    setTrackingStatus(1);
+  };
+
+  // Tracking Popup Component
+  const TrackingPopup = () => {
+    if (!showTrackingPopup || !selectedTicketForTracking) return null;
+
+    const statusSteps = [
+      { id: 1, title: "Sopir menuju lokasi kamu", icon: Navigation, description: "Bus sedang dalam perjalanan ke halte jemput" },
+      { id: 2, title: "Kamu sedang dalam perjalanan", icon: BusIcon, description: "Nikmati perjalananmu dengan nyaman" },
+      { id: 3, title: "Kamu sudah sampai tujuan", icon: CheckCircle, description: "Terima kasih telah menggunakan Gaskeunn" },
+    ];
+
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeTrackingPopup}>
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)] p-4 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto brightness-0 invert" />
+              <div>
+                <h2 className="text-white font-bold text-lg">Live Tracking</h2>
+                <p className="text-white/80 text-sm">Bus {selectedTicketForTracking?.bus || "01"} • {selectedTicketForTracking?.bookingCode || "BUS01150224"}</p>
+              </div>
+            </div>
+            <button onClick={closeTrackingPopup} className="text-white hover:bg-white/20 p-2 rounded-full transition">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-6" style={{ scrollbarWidth: "thin", scrollbarColor: "#d1d5db #f3f4f6" }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Side - Map */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-[oklch(0.805_0.1545_76.47)]" />
+                  Real-Time Location
+                </h3>
+                <div className="h-80 rounded-2xl overflow-hidden border-2 border-gray-200 shadow-inner">
+                  <MapContainer
+                    center={[-7.938, 112.67]}
+                    zoom={14}
+                    style={{ height: "100%", width: "100%" }}
+                    className="z-0"
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    
+                    {/* Route Line */}
+                    <Polyline
+                      positions={routeCoordinates}
+                      color="#e0a82e"
+                      weight={4}
+                      opacity={0.8}
+                      dashArray="10, 10"
+                    />
+
+                    {/* Start Halte Marker */}
+                    <Marker position={routeCoordinates[0]} icon={createHalteIcon(true)}>
+                      <Popup>
+                        <div className="text-center">
+                          <p className="font-bold text-green-600">Halte Jemput</p>
+                          <p className="text-sm text-gray-600">{selectedTicketForTracking?.departure?.location || "Araya"}</p>
+                        </div>
+                      </Popup>
+                    </Marker>
+
+                    {/* End Halte Marker */}
+                    <Marker position={routeCoordinates[routeCoordinates.length - 1]} icon={createHalteIcon(false)}>
+                      <Popup>
+                        <div className="text-center">
+                          <p className="font-bold text-[oklch(0.65_0.15_76.47)]">Tujuan</p>
+                          <p className="text-sm text-gray-600">{selectedTicketForTracking?.arrival?.location || "BINUS University"}</p>
+                        </div>
+                      </Popup>
+                    </Marker>
+
+                    {/* Animated Bus Marker */}
+                    <AnimatedBusMarker route={routeCoordinates} progress={busProgress} />
+                  </MapContainer>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="bg-gray-100 rounded-xl p-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>{selectedTicketForTracking?.departure?.location || "Araya"}</span>
+                    <span>{selectedTicketForTracking?.arrival?.location || "BINUS University"}</span>
+                  </div>
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        trackingStatus === 3 
+                          ? "bg-gradient-to-r from-green-500 to-green-400" 
+                          : "bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)]"
+                      }`}
+                      style={{ width: `${busProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-center text-sm text-gray-500 mt-2">
+                    {trackingStatus === 3 ? (
+                      <span className="font-semibold text-green-600">🎉 Kamu sudah sampai di tujuan!</span>
+                    ) : (
+                      <>Estimasi tiba: <span className="font-semibold text-gray-900">{Math.max(1, Math.round((100 - busProgress) / 10))} menit</span></>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Side - Tracking Status & Driver Info */}
+              <div className="space-y-6">
+                {/* Tracking Status */}
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg mb-4 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-[oklch(0.805_0.1545_76.47)]" />
+                    Status Perjalanan
+                  </h3>
+                  <div className="space-y-4">
+                    {statusSteps.map((step, index) => {
+                      const isActive = trackingStatus === step.id;
+                      const isCompleted = trackingStatus > step.id;
+                      const isFinalCompleted = trackingStatus === 3 && step.id === 3;
+                      const StepIcon = step.icon;
+
+                      return (
+                        <div key={step.id} className="flex gap-4">
+                          {/* Timeline */}
+                          <div className="flex flex-col items-center">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                              isCompleted || isFinalCompleted ? "bg-green-500" : isActive ? "bg-[oklch(0.805_0.1545_76.47)] animate-pulse" : "bg-gray-200"
+                            }`}>
+                              {isCompleted || isFinalCompleted ? (
+                                <Check className="w-5 h-5 text-white" />
+                              ) : (
+                                <StepIcon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-400"}`} />
+                              )}
+                            </div>
+                            {index < statusSteps.length - 1 && (
+                              <div className={`w-0.5 h-12 mt-2 ${
+                                isCompleted ? "bg-green-500" : "bg-gray-200"
+                              }`}></div>
+                            )}
+                          </div>
+
+                          {/* Content */}
+                          <div className={`flex-1 pb-4 ${isActive || isFinalCompleted ? "" : "opacity-60"}`}>
+                            <p className={`font-semibold ${isFinalCompleted ? "text-green-600" : isActive ? "text-[oklch(0.805_0.1545_76.47)]" : isCompleted ? "text-green-600" : "text-gray-600"}`}>
+                              {step.title}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">{step.description}</p>
+                            {isActive && !isFinalCompleted && (
+                              <span className="inline-block mt-2 px-3 py-1 bg-[oklch(0.94_0.08_85)] text-[oklch(0.65_0.15_76.47)] text-xs font-semibold rounded-full animate-pulse">
+                                Sedang berlangsung
+                              </span>
+                            )}
+                            {isFinalCompleted && (
+                              <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-600 text-xs font-semibold rounded-full">
+                                Selesai
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Driver Information */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border border-gray-200">
+                  <h3 className="font-bold text-gray-900 text-lg mb-4">Informasi Driver</h3>
+                  
+                  <div className="flex items-start gap-4">
+                    {/* Driver Photo */}
+                    <div className="relative">
+                      <img 
+                        src={driverData.photo} 
+                        alt={driverData.name}
+                        className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                      />
+                      <div className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full border-2 border-white"></div>
+                    </div>
+
+                    {/* Driver Details */}
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 text-lg">{driverData.name}</h4>
+                      <p className="text-gray-500 text-sm">{driverData.role}</p>
+                      
+                      {/* Rating */}
+                      <div className="flex items-center gap-1 mt-2">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        <span className="font-semibold text-gray-900">{driverData.rating}</span>
+                        <span className="text-gray-400 text-sm">• {driverData.totalTrips} trips</span>
+                      </div>
+
+                      {/* Bus Number */}
+                      <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-[oklch(0.94_0.08_85)] rounded-full">
+                        <BusIcon className="w-4 h-4 text-[oklch(0.65_0.15_76.47)]" />
+                        <span className="text-sm font-semibold text-[oklch(0.65_0.15_76.47)]">{driverData.busNumber}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 mt-5">
+                    <button 
+                      onClick={() => window.open(`tel:${driverData.phone}`, '_self')}
+                      className="flex-1 flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold transition-colors shadow-lg shadow-green-500/30"
+                    >
+                      <Phone className="w-5 h-5" />
+                      Call Driver
+                    </button>
+                    <button 
+                      onClick={() => window.open(`https://wa.me/${driverData.phone.replace('+', '')}`, '_blank')}
+                      className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-semibold transition-colors shadow-lg shadow-blue-500/30"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      Message
+                    </button>
+                  </div>
+                </div>
+
+                {/* Trip Info */}
+                <div className="bg-white rounded-xl p-4 border border-gray-200">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-gray-500 text-xs">Departure</p>
+                      <p className="font-bold text-gray-900">{selectedTicketForTracking?.departure?.time || "06:45"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Arrival</p>
+                      <p className="font-bold text-gray-900">{selectedTicketForTracking?.arrival?.time || "07:00"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Seat</p>
+                      <p className="font-bold text-gray-900">{selectedTicketForTracking?.seat || "12"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // News data
   const newsData = [
@@ -127,50 +518,42 @@ function Home() {
     { name: "Bundaran PBI", titik: "T8" },
   ];
 
-  // Testimonials
-  const testimonials = [
-    { rating: 4.8, text: "Menyenangkan banget dan akhirnya datang kuliah tepat waktu dan membantu sekali, Harapan saya untuk pihak developer lebih meningkatkan lagi aplikasi, dan juga sukses ya!", name: "Andre Nugroho", role: "Digital Communication", avatar: "https://ui-avatars.com/api/?name=Andre+Nugroho&background=3b82f6&color=fff&size=128" },
-    { rating: 4.0, text: "Love banget sama Gaskeunn! 😍 Aksesnya mudah, sekarang sudah bisa on time. Selain itu, drivernya ramah banget & tahu jalan", name: "Putu Ayu Verena", role: "Computer Science", avatar: "https://ui-avatars.com/api/?name=Verena+Ayu&background=ec4899&color=fff&size=128" },
-    { rating: 5, text: "Gaskeunn bener-bener ngebantu banget! Kuliahnya sekarang ngga telat lagi, aplikasinya juga sangat mudah digunakan, dan gratis pula!", name: "Kadek Samuel", role: "Interior Design", avatar: "https://ui-avatars.com/api/?name=Kadek+Samuel&background=10b981&color=fff&size=128" },
-    { rating: 4.5, text: "Sangat membantu untuk mahasiswa yang tinggal jauh dari kampus. Jadwalnya juga tepat waktu dan busnya nyaman!", name: "Pradipta Laksmana", role: "Business Management", avatar: "https://ui-avatars.com/api/?name=P+L&background=f59e0b&color=fff&size=128" },
-    { rating: 4.7, text: "Pelayanan yang memuaskan, driver profesional, dan aplikasinya user-friendly. Recommended!", name: "Michael Vincent", role: "Information Systems", avatar: "https://ui-avatars.com/api/?name=M+V&background=8b5cf6&color=fff&size=128" },
-    { rating: 4.9, text: "Gaskeunn solusi terbaik untuk transportasi ke kampus! Ngga perlu khawatir telat lagi.", name: "Joceline Sudigdo", role: "Accounting", avatar: "https://ui-avatars.com/api/?name=J+S&background=ef4444&color=fff&size=128" },
-    { rating: 4.6, text: "Aplikasi sangat membantu! Shuttle selalu on time dan rutenya strategis. Recommend banget buat mahasiswa BINUS!", name: "Ametung Sutejo", role: "Marketing Communication", avatar: "https://ui-avatars.com/api/?name=A+S&background=06b6d4&color=fff&size=128" },
-    { rating: 4.8, text: "Sejak pakai Gaskeunn, perjalanan ke kampus jadi lebih praktis dan hemat waktu. Terima kasih Gaskeunn!", name: "Dirgantara Sena", role: "International Relations", avatar: "https://ui-avatars.com/api/?name=D+S&background=14b8a6&color=fff&size=128" },
-    { rating: 5, text: "Layanan shuttle yang sangat profesional dan nyaman. Aplikasinya juga mudah digunakan, best solution untuk mahasiswa!", name: "Arief Rahman", role: "Civil Engineering", avatar: "https://ui-avatars.com/api/?name=A+R&background=6366f1&color=fff&size=128" },
-  ];
+  // ✅ PERBAIKAN: Ambil testimonials dari ReviewContext
+  const testimonials = getHomeReviews();
+
+  // ✅ DYNAMIC TESTIMONIALS PAGINATION
+  const getCardsPerSlide = () => {
+    if (testimonials.length <= 3) return testimonials.length; // Show all
+    if (testimonials.length <= 6) return 2; // 2 cards per slide
+    return 3; // 3 cards per slide (default)
+  };
+
+  const cardsPerSlide = getCardsPerSlide();
+  const totalPages = Math.ceil(testimonials.length / cardsPerSlide);
+  const scrollTimeoutRef = useRef(null);
 
   // FAQs
   const faqs = [
     {
       question: "What is Gaskeunn?",
-      answer:
-        "Gaskeunn adalah layanan shuttle bus BINUS University @Malang yang menyediakan transportasi untuk mahasiswa dari berbagai titik lokasi.",
+      answer: "Gaskeunn adalah layanan shuttle bus BINUS University @Malang yang menyediakan transportasi untuk mahasiswa dari berbagai titik lokasi.",
     },
     {
       question: "How do I book a shuttle bus?",
-      answer:
-        "Anda dapat melakukan booking melalui aplikasi Gaskeunn dengan memilih rute, waktu keberangkatan, dan mengisi data diri.",
+      answer: "Anda dapat melakukan booking melalui aplikasi Gaskeunn dengan memilih rute, waktu keberangkatan, dan mengisi data diri.",
     },
     {
       question: "What if the shuttle is late?",
-      answer:
-        "Anda dapat melacak posisi shuttle secara real-time melalui fitur tracking di aplikasi.",
+      answer: "Anda dapat melacak posisi shuttle secara real-time melalui fitur tracking di aplikasi.",
     },
     {
       question: "Who can use this service?",
-      answer:
-        "Layanan ini tersedia untuk seluruh mahasiswa BINUS University yang terdaftar.",
+      answer: "Layanan ini tersedia untuk seluruh mahasiswa BINUS University yang terdaftar.",
     },
   ];
 
   const toggleFAQ = (index) => setOpenFAQ(openFAQ === index ? null : index);
 
-  // Testimonials pagination
-  const totalPages = Math.ceil(testimonials.length / 3);
-  const scrollTimeoutRef = useRef(null);
-
-  // Handler untuk update indicator saat manual scroll
   const handleScroll = () => {
     const container = testimonialRef.current;
     if (!container) return;
@@ -186,7 +569,7 @@ function Home() {
       const cardWidth = firstCard.offsetWidth;
       const gap = 24;
       const scrollLeft = container.scrollLeft;
-      const pageWidth = (cardWidth + gap) * 3;
+      const pageWidth = (cardWidth + gap) * cardsPerSlide;
       const newPage = Math.round(scrollLeft / pageWidth);
 
       if (newPage !== currentPage && newPage >= 0 && newPage < totalPages) {
@@ -204,7 +587,7 @@ function Home() {
 
     const cardWidth = firstCard.offsetWidth;
     const gap = 24;
-    const scrollPosition = pageIndex * ((cardWidth + gap) * 3);
+    const scrollPosition = pageIndex * ((cardWidth + gap) * cardsPerSlide);
 
     container.scrollTo({
       left: scrollPosition,
@@ -242,11 +625,11 @@ function Home() {
     }
   };
 
-  // Render My Tickets (Today's tickets only)
+  // Render My Tickets (Next upcoming ticket only - closest to current time, today only)
   const renderMyTickets = () => {
-    const todayTickets = getTodayTickets();
+    const ticket = getNextUpcomingTicket();
 
-    if (todayTickets.length === 0) {
+    if (!ticket) {
       return (
         <div className="flex flex-col items-center justify-center py-16">
           <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -255,7 +638,7 @@ function Home() {
           <h3 className="text-xl font-bold text-gray-800 mb-2">Tidak ada tiket hari ini</h3>
           <p className="text-gray-500 mb-6 text-center">Kamu belum memesan tiket untuk hari ini.<br/>Yuk booking perjalananmu sekarang!</p>
           <button 
-            onClick={() => navigate('/passenger/booking')}
+            onClick={() => navigate('/booking')}
             className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg"
           >
             Book Ticket Sekarang
@@ -264,12 +647,13 @@ function Home() {
       );
     }
 
-    const ticket = todayTickets[0]; // Show first ticket
-
     return (
       <div className="flex gap-4">
-        {/* Main Ticket Card */}
-        <div className="flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow">
+        {/* Main Ticket Card - Clickable for tracking if ongoing */}
+        <div 
+          className={`flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow ${ticket.status === "ongoing" ? "cursor-pointer" : ""}`}
+          onClick={() => ticket.status === "ongoing" && handleTicketClick(ticket)}
+        >
           <div className="flex">
             {/* Left Section */}
             <div className="flex-1 p-5">
@@ -310,6 +694,13 @@ function Home() {
                   <span className="text-xs leading-tight">Please be at the boarding gate at least 30 minutes before.</span>
                 </div>
               </div>
+              {/* Click to Track Indicator - Only show for ongoing tickets */}
+              {ticket.status === "ongoing" && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-orange-500 animate-pulse">
+                  <MapPin size={16} />
+                  <span className="text-sm font-medium">Klik untuk Live Tracking</span>
+                </div>
+              )}
             </div>
 
             {/* Divider */}
@@ -381,33 +772,16 @@ function Home() {
     );
   };
 
-  // Render Latest News
-  const renderLatestNews = () => (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {newsData.map((news) => (
-        <div key={news.id} className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow">
-          <div className="h-48 overflow-hidden">
-            <img src={news.image} alt={news.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-          </div>
-          <div className="p-5">
-            <p className="text-gray-500 text-sm mb-2">{news.source}</p>
-            <h3 className="font-bold text-gray-900 text-lg mb-4 leading-tight line-clamp-3">{news.title}</h3>
-            <div className="flex justify-end">
-              <a href={news.link} className="text-blue-500 hover:text-blue-600 font-medium text-sm hover:underline">Read More</a>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
   // Render History Card
   const renderHistoryCard = (ticket) => {
     const statusBadge = getStatusBadge(ticket.status);
 
     return (
       <div key={ticket.id} className="flex gap-4 shrink-0">
-        <div className="flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow">
+        <div 
+          className={`flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow ${ticket.status === "ongoing" ? "cursor-pointer" : ""}`}
+          onClick={() => ticket.status === "ongoing" && handleTicketClick(ticket)}
+        >
           <div className="flex">
             <div className="flex-1 p-5">
               <div className="mb-4">
@@ -447,6 +821,13 @@ function Home() {
                   <span className="text-xs leading-tight">Be at boarding gate 30 min before.</span>
                 </div>
               </div>
+              {/* Click to Track Indicator - Only for ongoing */}
+              {ticket.status === "ongoing" && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-orange-500 animate-pulse">
+                  <MapPin size={16} />
+                  <span className="text-sm font-medium">Klik untuk Live Tracking</span>
+                </div>
+              )}
             </div>
 
             <div className="relative">
@@ -578,6 +959,9 @@ function Home() {
 
   return (
     <>
+      {/* Tracking Popup */}
+      <TrackingPopup />
+      
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50">
         <Navbar />
         
@@ -610,7 +994,6 @@ function Home() {
                   <div className="flex gap-0 w-fit">
                     {[
                       { id: "tickets", label: "My Tickets", icon: Ticket },
-                      { id: "news", label: "Latest News", icon: Newspaper },
                       { id: "histories", label: "Histories", icon: Clock }
                     ].map((tab) => (
                       <button 
@@ -628,7 +1011,6 @@ function Home() {
                 </div>
                 <div className="p-6 min-h-[420px]">
                   {activeTab === "tickets" && renderMyTickets()}
-                  {activeTab === "news" && renderLatestNews()}
                   {activeTab === "histories" && renderHistories()}
                 </div>
               </div>
@@ -809,7 +1191,7 @@ function Home() {
             </div>
           </div>
 
-          {/* Testimonials */}
+          {/* ✅ TESTIMONIALS - DYNAMIC LAYOUT */}
           <div className="bg-white py-16 px-8">
             <div className="max-w-6xl mx-auto">
               <div className="flex items-center justify-between mb-12">
@@ -820,8 +1202,8 @@ function Home() {
                   </p>
                 </div>
 
-                {/* Navigation Buttons */}
-                {testimonials.length > 3 && (
+                {/* Navigation Buttons - Only show if needed */}
+                {totalPages > 1 && (
                   <div className="flex gap-3">
                     <button
                       onClick={() => scrollTestimonials("prev")}
@@ -856,11 +1238,11 @@ function Home() {
                 <div
                   ref={testimonialRef}
                   onScroll={handleScroll}
-                  className="flex gap-6 overflow-x-scroll scroll-smooth scrollbar-hide pr-5"
+                  className={`flex gap-6 ${totalPages > 1 ? 'overflow-x-scroll scroll-smooth' : 'justify-center'} scrollbar-hide pr-5`}
                   style={{
                     scrollbarWidth: "none",
                     msOverflowStyle: "none",
-                    scrollSnapType: "x mandatory",
+                    scrollSnapType: totalPages > 1 ? "x mandatory" : "none",
                   }}
                 >
                   {testimonials.map((testimonial, idx) => (
@@ -868,9 +1250,13 @@ function Home() {
                       key={idx}
                       className="testimonial-card bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex flex-col h-80 shrink-0 hover:border-[oklch(0.55_0.14_243.17)] transition-colors duration-300"
                       style={{
-                        width: "calc((100% - 48px) / 3)",
-                        scrollSnapAlign: idx % 3 === 0 ? "start" : "none",
-                        scrollSnapStop: idx % 3 === 0 ? "always" : "normal",
+                        width: cardsPerSlide === 1 
+                          ? "calc(100%)" 
+                          : cardsPerSlide === 2 
+                            ? "calc((100% - 24px) / 2)" 
+                            : "calc((100% - 48px) / 3)",
+                        scrollSnapAlign: idx % cardsPerSlide === 0 ? "start" : "none",
+                        scrollSnapStop: idx % cardsPerSlide === 0 ? "always" : "normal",
                       }}
                     >
                       <div className="flex items-center gap-1 mb-4 shrink-0">
@@ -879,7 +1265,7 @@ function Home() {
                       </div>
                       <div className="grow overflow-y-auto mb-4 pr-1 custom-scrollbar">
                         <p className="text-gray-700 text-md leading-relaxed text-left">
-                          {testimonial.text}
+                          {testimonial.comment}
                         </p>
                       </div>
                       <div className="mt-auto pt-4 border-t border-gray-100 shrink-0">
@@ -902,8 +1288,8 @@ function Home() {
                 </div>
               </div>
 
-              {/* Line Indicators */}
-              {testimonials.length > 3 && (
+              {/* Line Indicators - Only show if pagination needed */}
+              {totalPages > 1 && (
                 <div className="flex justify-center gap-3 mt-8">
                   {Array.from({ length: totalPages }).map((_, idx) => (
                     <button 
