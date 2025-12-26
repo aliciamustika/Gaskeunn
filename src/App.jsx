@@ -49,7 +49,7 @@ import AdminDashboardDebug from "./page/Admin/AdminDashboard_Debug";
 
 function App() {
   return (
-    <>
+    <Router basename="/Gaskeunn">
       <NotificationProvider>
         <ReviewProvider>
           <BookingProvider>
@@ -91,15 +91,13 @@ function App() {
 
               {/* PAGE | ADMIN */}
               <Route path="/adminpage" element={<AdminPage />} />
-
               <Route path="/adminpagehuhu" element={<AdminDashboardDebug />} />
-
               <Route path="/bookingcontext" element={<BookingContext />} />
             </Routes>
           </BookingProvider>
         </ReviewProvider>
       </NotificationProvider>
-    </>
+    </Router>
   );
 }
 
