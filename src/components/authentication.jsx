@@ -21,7 +21,7 @@ const USERS = [
     email: 'verena.cheryl@binus.ac.id',
     password: '11223344',
     role: 'penumpang',
-    name: 'Verena cheryl',
+    name: 'Verena Cheryl',
     redirectTo: '/home'
   },
   {
