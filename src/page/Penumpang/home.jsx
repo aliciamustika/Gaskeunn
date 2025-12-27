@@ -11,7 +11,7 @@ import { useBooking } from "../../context/BookingContext";
 // Import images
 import Comic from "../../assets/img/comic.png";
 import GaskeunnLogo from "../../assets/img/Gaskeunn.png";
-import SchoolBus from "../../assets/img/School_bus.png";
+import SchoolBus from "../../assets/img/school_bus.png";
 import BarcodeImage from "../../assets/img/QRIS.png";
 import NewsImage1 from "../../assets/img/wisuda.jpg";
 import NewsImage2 from "../../assets/img/jembatan.jpg";
