@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  base: '/Gaskeunn',
+  base: '/Gaskeunn/', // ← UBAH INI sesuai nama repo
   plugins: [
     react(),
     tailwindcss()
