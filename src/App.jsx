@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { BookingProvider } from "./context/BookingContext";
 import { ReviewProvider } from "./context/ReviewContext";
 
@@ -49,55 +49,53 @@ import AdminDashboardDebug from "./page/Admin/AdminDashboard_Debug";
 
 function App() {
   return (
-    <Router basename="/Gaskeunn">
-      <NotificationProvider>
-        <ReviewProvider>
-          <BookingProvider>
-            <ScrollToTop />
-            <Routes>
-              {/* COMPONENTS */}
-              <Route path="/" element={<Welcome />} />
-              <Route path="/auth" element={<Authentication />} />
-              <Route path="/footer" element={<Footer />} />
-              <Route path="/register" element={<Register />} />
+    <NotificationProvider>
+      <ReviewProvider>
+        <BookingProvider>
+          <ScrollToTop />
+          <Routes>
+            {/* COMPONENTS */}
+            <Route path="/" element={<Welcome />} />
+            <Route path="/auth" element={<Authentication />} />
+            <Route path="/footer" element={<Footer />} />
+            <Route path="/register" element={<Register />} />
 
-              {/* PAGE | PENUMPANG */}
-              <Route path="/home" element={<Home />} />
-              <Route path="/navbar" element={<Navbar />} />
-              <Route path="/booking" element={<Booking />} />
-              <Route path="/news" element={<News />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/contactus" element={<ContactUs />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/aboutus" element={<AboutUs />} />
-              <Route path="/routeschedule" element={<RouteSchedule />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/route" element={<RouteP />} />
-              <Route path="/notification" element={<Notification />} />
-              <Route path="/detail-ticket/:id" element={<DetailTicket />} />
+            {/* PAGE | PENUMPANG */}
+            <Route path="/home" element={<Home />} />
+            <Route path="/navbar" element={<Navbar />} />
+            <Route path="/booking" element={<Booking />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/contactus" element={<ContactUs />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/aboutus" element={<AboutUs />} />
+            <Route path="/routeschedule" element={<RouteSchedule />} />
+            <Route path="/schedule" element={<Schedule />} />
+            <Route path="/route" element={<RouteP />} />
+            <Route path="/notification" element={<Notification />} />
+            <Route path="/detail-ticket/:id" element={<DetailTicket />} />
 
-              {/* PAGE | SOPIR */}
-              <Route path="/homesopir" element={<HomeS />} />
-              <Route path="/newssopir" element={<NewsS />} />
-              <Route path="/navbarsopir" element={<NavbarS />} />
-              <Route path="/profilesopir" element={<ProfileS />} />
-              <Route path="/order" element={<Order />} />
-              <Route path="/workhistory" element={<WorkHistory />} />
-              <Route path="/aboutussopir" element={<AboutUsS />} />
-              <Route path="/schedulesopir" element={<ScheduleS />} />
-              <Route path="/routesopir" element={<RouteS />} />
-              <Route path="/routeschedulesopir" element={<RouteScheduleS />} />
-              <Route path="/contactussopir" element={<ContactUsS />} />
+            {/* PAGE | SOPIR */}
+            <Route path="/homesopir" element={<HomeS />} />
+            <Route path="/newssopir" element={<NewsS />} />
+            <Route path="/navbarsopir" element={<NavbarS />} />
+            <Route path="/profilesopir" element={<ProfileS />} />
+            <Route path="/order" element={<Order />} />
+            <Route path="/workhistory" element={<WorkHistory />} />
+            <Route path="/aboutussopir" element={<AboutUsS />} />
+            <Route path="/schedulesopir" element={<ScheduleS />} />
+            <Route path="/routesopir" element={<RouteS />} />
+            <Route path="/routeschedulesopir" element={<RouteScheduleS />} />
+            <Route path="/contactussopir" element={<ContactUsS />} />
 
-              {/* PAGE | ADMIN */}
-              <Route path="/adminpage" element={<AdminPage />} />
-              <Route path="/adminpagehuhu" element={<AdminDashboardDebug />} />
-              <Route path="/bookingcontext" element={<BookingContext />} />
-            </Routes>
-          </BookingProvider>
-        </ReviewProvider>
-      </NotificationProvider>
-    </Router>
+            {/* PAGE | ADMIN */}
+            <Route path="/adminpage" element={<AdminPage />} />
+            <Route path="/adminpagehuhu" element={<AdminDashboardDebug />} />
+            <Route path="/bookingcontext" element={<BookingContext />} />
+          </Routes>
+        </BookingProvider>
+      </ReviewProvider>
+    </NotificationProvider>
   );
 }
 
