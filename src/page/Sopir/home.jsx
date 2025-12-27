@@ -181,7 +181,7 @@ function Home({ userName = "Budi" }) {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-orange-50 to-amber-50">
         <Navbar />
         
         <div className="bg-gray-50 min-h-screen">

@@ -268,7 +268,7 @@ function Home() {
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeTrackingPopup}>
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
-          <div className="bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)] p-4 flex items-center justify-between shrink-0">
+          <div className="bg-linear-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)] p-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto brightness-0 invert" />
               <div>
@@ -346,8 +346,8 @@ function Home() {
                     <div 
                       className={`h-full rounded-full transition-all duration-500 ${
                         trackingStatus === 3 
-                          ? "bg-gradient-to-r from-green-500 to-green-400" 
-                          : "bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)]"
+                          ? "bg-linear-to-r from-green-500 to-green-400" 
+                          : "bg-linear-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)]"
                       }`}
                       style={{ width: `${busProgress}%` }}
                     ></div>
@@ -421,7 +421,7 @@ function Home() {
                 </div>
 
                 {/* Driver Information */}
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border border-gray-200">
+                <div className="bg-linear-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border border-gray-200">
                   <h3 className="font-bold text-gray-900 text-lg mb-4">Informasi Driver</h3>
                   
                   <div className="flex items-start gap-4">
@@ -639,7 +639,7 @@ function Home() {
           <p className="text-gray-500 mb-6 text-center">Kamu belum memesan tiket untuk hari ini.<br/>Yuk booking perjalananmu sekarang!</p>
           <button 
             onClick={() => navigate('/booking')}
-            className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg"
+            className="px-8 py-3 bg-linear-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg"
           >
             Book Ticket Sekarang
           </button>
@@ -962,7 +962,7 @@ function Home() {
       {/* Tracking Popup */}
       <TrackingPopup />
       
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-orange-50 to-amber-50">
         <Navbar />
         
         <div className="bg-gray-50 min-h-screen">
@@ -1009,7 +1009,7 @@ function Home() {
                     ))}
                   </div>
                 </div>
-                <div className="p-6 min-h-[420px]">
+                <div className="p-6 min-h-105">
                   {activeTab === "tickets" && renderMyTickets()}
                   {activeTab === "histories" && renderHistories()}
                 </div>
