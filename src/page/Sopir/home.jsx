@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 // Import images (sesuaikan dengan struktur project Anda)
 import Comic from "../../assets/img/comic.png";
 import GaskeunnLogo from "../../assets/img/Gaskeunn.png";
-import SchoolBus from "../../assets/img/School_bus.png";
+import SchoolBus from "../../assets/img/school_bus.png";
 import Campustour from "../../assets/video/campustour.mp4";
 
 // Image Gallery Component
