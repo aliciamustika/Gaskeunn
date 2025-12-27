@@ -15,7 +15,7 @@ import SchoolBus from "../../assets/img/school_bus.png";
 import BarcodeImage from "../../assets/img/QRIS.png";
 import NewsImage1 from "../../assets/img/wisuda.jpg";
 import NewsImage2 from "../../assets/img/jembatan.jpg";
-import NewsImage3 from "../../assets/img/BINUS-malang.jpeg";
+import NewsImage3 from "../../assets/img/BINUS-Malang.jpeg";
 import Campustour from "../../assets/video/campustour.mp4";
 
 import { IoIosInformationCircle } from "react-icons/io";
