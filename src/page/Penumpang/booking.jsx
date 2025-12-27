@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./navbar";
 import Footer from "../../components/footer";
-import QrisImage from "../../assets/img/qris.png";
+import QrisImage from "../../assets/img/QRIS.png";
 import { useBooking } from "../../context/BookingContext";
 
 import {
@@ -225,7 +225,7 @@ function Booking() {
               <div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Status</span><span className={`font-semibold text-sm ${isPending ? 'text-purple-600' : 'text-green-600'}`}>{isPending ? 'Menunggu Pembayaran' : 'Sudah Dibayar'}</span></div>
               <div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Tanggal</span><span className="font-semibold text-gray-900 text-sm">{newBooking.departure.date}</span></div>
               <div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Waktu</span><span className="font-semibold text-gray-900 text-sm">{newBooking.departure.time}</span></div>
-              <div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Dari</span><span className="font-semibold text-gray-900 text-right text-sm max-w-[180px]">{newBooking.departure.location}</span></div>
+              <div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Dari</span><span className="font-semibold text-gray-900 text-right text-sm max-w-45">{newBooking.departure.location}</span></div>
               <div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Ke</span><span className="font-semibold text-gray-900 text-sm">{newBooking.arrival.location}</span></div>
               <div className="border-t border-gray-200 pt-2 mt-2"><div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Bus / Kursi</span><span className="font-bold text-gray-900 text-sm">Bus {newBooking.bus} / Seat {newBooking.seat}</span></div></div>
               <div className="border-t border-gray-200 pt-2"><div className="flex justify-between items-center"><span className="text-gray-500 text-sm">Total</span><span className="font-bold text-lg text-[oklch(0.6155_0.1314_243.17)]">Rp {newBooking.totalPrice.toLocaleString('id-ID')}</span></div></div>
@@ -245,9 +245,9 @@ function Booking() {
   return (
     <>
       <SuccessModal />
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-amber-50">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-orange-50 to-amber-50">
         <Navbar />
-        <div className="min-h-screen bg-gradient-to-b from-[oklch(0.6155_0.1314_243.17)] to-[oklch(0.7_0.12_243.17)]">
+        <div className="min-h-screen bg-linear-to-b from-[oklch(0.6155_0.1314_243.17)] to-[oklch(0.7_0.12_243.17)]">
           <div className="py-12 px-8"><div className="max-w-7xl mx-auto"><h1 className="text-4xl md:text-5xl font-bold text-white text-left mb-2">Gaskeunn Book Your Journey Ticket</h1></div></div>
           <div className="pb-16 px-8">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-start">
@@ -367,7 +367,7 @@ function Booking() {
                     </div>
                   )}
 
-                  <button onClick={handleBookTicket} disabled={isBooking || (payNow && !selectedQrisOption)} className={`w-full font-bold py-4 rounded-lg shadow-lg transition flex items-center justify-center gap-2 ${isBooking || (payNow && !selectedQrisOption) ? 'bg-gray-400 cursor-not-allowed text-white' : payNow ? 'bg-gradient-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90' : 'bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:opacity-90'}`}>
+                  <button onClick={handleBookTicket} disabled={isBooking || (payNow && !selectedQrisOption)} className={`w-full font-bold py-4 rounded-lg shadow-lg transition flex items-center justify-center gap-2 ${isBooking || (payNow && !selectedQrisOption) ? 'bg-gray-400 cursor-not-allowed text-white' : payNow ? 'bg-linear-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90' : 'bg-linear-to-r from-purple-600 to-purple-500 text-white hover:opacity-90'}`}>
                     {isBooking ? (<><Loader2 className="w-5 h-5 animate-spin" />Processing...</>) : payNow ? (<><Wallet className="w-5 h-5" />Bayar & Book Ticket</>) : (<><Timer className="w-5 h-5" />Book Ticket (Bayar Nanti)</>)}
                   </button>
                   {payNow && !selectedQrisOption && (<p className="text-xs text-center text-gray-500 mt-2">Pilih metode pembayaran untuk melanjutkan</p>)}

@@ -7,7 +7,6 @@ import Navbar from "./navbar";
 import Footer from "../../components/footer";
 import GaskeunnLogo from "../../assets/img/Gaskeunn.png";
 import BarcodeImage from "../../assets/img/QRIS.png";
-import QrisImage from "../../assets/img/qris.png";
 import { useBooking } from "../../context/BookingContext";
 
 import {
@@ -336,7 +335,7 @@ function History() {
 
           {/* Footer - Fixed */}
           <div className="p-5 border-t border-gray-100 shrink-0">
-            <button onClick={confirmPaymentHandler} disabled={!selectedPaymentMethod} className={`w-full py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 ${selectedPaymentMethod ? "bg-gradient-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}>
+            <button onClick={confirmPaymentHandler} disabled={!selectedPaymentMethod} className={`w-full py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 ${selectedPaymentMethod ? "bg-linear-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}>
               <Wallet className="w-5 h-5" />Konfirmasi Pembayaran
             </button>
           </div>
@@ -356,7 +355,7 @@ function History() {
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeTrackingPopup}>
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)] p-4 flex items-center justify-between shrink-0">
+          <div className="bg-linear-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)] p-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto brightness-0 invert" />
               <div><h2 className="text-white font-bold text-lg">Live Tracking</h2><p className="text-white/80 text-sm">Bus {selectedTicketForTracking?.bus} • {selectedTicketForTracking?.bookingCode}</p></div>
@@ -378,7 +377,7 @@ function History() {
                 </div>
                 <div className="bg-gray-100 rounded-xl p-4">
                   <div className="flex justify-between text-sm text-gray-600 mb-2"><span>{selectedTicketForTracking?.departure?.location}</span><span>{selectedTicketForTracking?.arrival?.location}</span></div>
-                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-500 ${trackingStatus === 3 ? "bg-gradient-to-r from-green-500 to-green-400" : "bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)]"}`} style={{ width: `${busProgress}%` }}></div></div>
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-500 ${trackingStatus === 3 ? "bg-linear-to-r from-green-500 to-green-400" : "bg-linear-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)]"}`} style={{ width: `${busProgress}%` }}></div></div>
                   <p className="text-center text-sm text-gray-500 mt-2">{trackingStatus === 3 ? <span className="font-semibold text-green-600">🎉 Kamu sudah sampai!</span> : <>Estimasi: <span className="font-semibold">{Math.max(1, Math.round((100 - busProgress) / 10))} menit</span></>}</p>
                 </div>
               </div>
@@ -404,7 +403,7 @@ function History() {
                     })}
                   </div>
                 </div>
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border border-gray-200 text-left">
+                <div className="bg-linear-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border border-gray-200 text-left">
                   <h3 className="font-bold text-gray-900 text-lg mb-4">Informasi Driver</h3>
                   <div className="flex items-start gap-4">
                     <div className="relative"><img src={driverData.photo} alt={driverData.name} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg" /><div className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full border-2 border-white"></div></div>
@@ -437,14 +436,14 @@ function History() {
 
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="bg-gradient-to-r from-orange-500 to-amber-500 py-16">
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-linear-to-r from-orange-500 to-amber-500 py-16">
+          <div className="max-w-350 mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-black text-white text-left">Your Journey Records, All in One Place.</h1>
             <p className="text-white/80 mt-2 text-lg text-left">Total {allTickets.length} perjalanan tercatat</p>
           </div>
         </div>
 
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-350 mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid md:grid-cols-2 gap-8 mb-8 text-left">
             <div>
               <h3 className="text-sm font-bold text-gray-700 mb-3">Select Status</h3>
@@ -557,7 +556,7 @@ function History() {
               <Package className="w-20 h-20 text-gray-300 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2">Belum ada perjalanan</h3>
               <p className="text-gray-500 mb-6">{selectedStatus === "All Status" ? "Kamu belum memiliki riwayat perjalanan." : `Tidak ada perjalanan dengan status "${selectedStatus}".`}</p>
-              <button onClick={() => navigate('/booking')} className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg">Book Ticket Sekarang</button>
+              <button onClick={() => navigate('/booking')} className="px-8 py-3 bg-linear-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg">Book Ticket Sekarang</button>
             </div>
           )}
         </div>
