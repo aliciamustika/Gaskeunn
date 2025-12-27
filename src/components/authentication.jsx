@@ -39,6 +39,13 @@ const USERS = [
     redirectTo: '/home'
   },
   {
+    email: 'sopir.binus@gaskeunn.com',
+    password: '11223344',
+    role: 'sopir',
+    name: 'Budi Suginto',
+    redirectTo: '/homesopir'
+  },
+  {
     email: 'admin@gaskeunn.com',
     password: 'admin123',
     role: 'admin',
