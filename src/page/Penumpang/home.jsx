@@ -168,6 +168,7 @@ function Home() {
   const [currentPage, setCurrentPage] = useState(0);
   const [historyFilter, setHistoryFilter] = useState("all");
   const testimonialRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Tracking Popup State
   const [showTrackingPopup, setShowTrackingPopup] = useState(false);
@@ -176,26 +177,22 @@ function Home() {
   const [trackingStatus, setTrackingStatus] = useState(1); // 1: menuju lokasi, 2: dalam perjalanan, 3: sampai
 
   // Get user name from localStorage
-  const user = JSON.parse(localStorage.getItem('user')) || {};
-  const getDisplayName = () => {
-    if (!user.name) return "Binusian";
-    const nameParts = user.name.split(' ');
-    if (user.role === 'admin') {
-      return nameParts[0];
-    }
-    if (nameParts.length >= 3 && (nameParts[0].toLowerCase() === 'ni' || nameParts[0].toLowerCase() === 'i')) {
-      return nameParts[2];
-    }
-    if (nameParts.length >= 2) {
-      return nameParts[1];
-    }
-    return nameParts[0];
-  };
-  const userName = getDisplayName();
+const user = JSON.parse(localStorage.getItem('user')) || {};
+const userName = user.displayName || "Binusian";
 
   // Scroll to top
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Simulate bus movement
@@ -476,7 +473,7 @@ function Home() {
 
                 {/* Trip Info */}
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-gray-500 text-xs">Departure</p>
                       <p className="font-bold text-gray-900">{selectedTicketForTracking?.departure?.time || "06:45"}</p>
@@ -523,9 +520,10 @@ function Home() {
 
   // ✅ DYNAMIC TESTIMONIALS PAGINATION
   const getCardsPerSlide = () => {
-    if (testimonials.length <= 3) return testimonials.length; // Show all
-    if (testimonials.length <= 6) return 2; // 2 cards per slide
-    return 3; // 3 cards per slide (default)
+    if (isMobile) return 1;
+    if (testimonials.length <= 3) return testimonials.length;
+    if (testimonials.length <= 6) return 2;
+    return 3;
   };
 
   const cardsPerSlide = getCardsPerSlide();
@@ -627,29 +625,33 @@ function Home() {
 
   // Render My Tickets (Next upcoming ticket only - closest to current time, today only)
   const renderMyTickets = () => {
-    const ticket = getNextUpcomingTicket();
+  const ticket = getNextUpcomingTicket();
 
-    if (!ticket) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-            <Ticket className="w-12 h-12 text-gray-400" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">Tidak ada tiket hari ini</h3>
-          <p className="text-gray-500 mb-6 text-center">Kamu belum memesan tiket untuk hari ini.<br/>Yuk booking perjalananmu sekarang!</p>
-          <button 
-            onClick={() => navigate('/booking')}
-            className="px-8 py-3 bg-linear-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg"
-          >
-            Book Ticket Sekarang
-          </button>
-        </div>
-      );
-    }
-
+  if (!ticket) {
     return (
-      <div className="flex gap-4">
-        {/* Main Ticket Card - Clickable for tracking if ongoing */}
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+          <Ticket className="w-12 h-12 text-gray-400" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Tidak ada tiket hari ini</h3>
+        <p className="text-gray-500 mb-6 text-center">
+          Kamu belum memesan tiket untuk hari ini.<br/>Yuk booking perjalananmu sekarang!
+        </p>
+        <button 
+          onClick={() => navigate('/booking')}
+          className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg"
+        >
+          Book Ticket Sekarang
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* DESKTOP VIEW - TIDAK DIUBAH */}
+      <div className="hidden md:flex gap-4">
+        {/* Main Ticket Card */}
         <div 
           className={`flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow ${ticket.status === "ongoing" ? "cursor-pointer" : ""}`}
           onClick={() => ticket.status === "ongoing" && handleTicketClick(ticket)}
@@ -694,7 +696,6 @@ function Home() {
                   <span className="text-xs leading-tight">Please be at the boarding gate at least 30 minutes before.</span>
                 </div>
               </div>
-              {/* Click to Track Indicator - Only show for ongoing tickets */}
               {ticket.status === "ongoing" && (
                 <div className="mt-4 flex items-center justify-center gap-2 text-orange-500 animate-pulse">
                   <MapPin size={16} />
@@ -710,7 +711,7 @@ function Home() {
               <div className="absolute -bottom-3 -left-3 w-6 h-6 bg-gray-50 rounded-full"></div>
             </div>
 
-            {/* Right Section - Passenger Info */}
+            {/* Right Section */}
             <div className="w-96 p-5 bg-white">
               <div className="flex justify-end mb-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(ticket.status).className}`}>
@@ -769,15 +770,125 @@ function Home() {
           </button>
         </div>
       </div>
-    );
-  };
 
-  // Render History Card
-  const renderHistoryCard = (ticket) => {
-    const statusBadge = getStatusBadge(ticket.status);
+      {/* MOBILE VIEW - NO SIDE NOTCHES */}
+      <div className="md:hidden flex justify-center px-4">
+        <div 
+          className={`relative bg-white rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 ${ticket.status === "ongoing" ? "cursor-pointer" : ""}`}
+          onClick={() => ticket.status === "ongoing" && handleTicketClick(ticket)}
+        >
+          {/* Main Content */}
+          <div className="p-6">
+            {/* Header - Logo & Status */}
+            <div className="flex items-center justify-between mb-6">
+              <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto" />
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold border-2 ${
+                ticket.status === "ongoing" ? "border-orange-500 text-orange-600 bg-white" : 
+                ticket.status === "pending" ? "border-purple-500 text-purple-600 bg-white" : 
+                ticket.status === "completed" ? "border-green-500 text-green-600 bg-white" : 
+                "border-red-500 text-red-600 bg-white"
+              }`}>
+                {ticket.status === "ongoing" ? "Ongoing" : 
+                 ticket.status === "pending" ? "Pending" : 
+                 ticket.status === "completed" ? "Completed" : "Cancelled"}
+              </span>
+            </div>
 
-    return (
-      <div key={ticket.id} className="flex gap-4 shrink-0">
+            {/* HORIZONTAL LAYOUT: Departure | Route | Destination */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between">
+                {/* Departure - LEFT (NO DATE) */}
+                <div className="flex-1 text-left">
+                  <p className="text-gray-500 text-xs mb-1">Departure</p>
+                  <p className="text-gray-900 text-2xl font-bold">{ticket.departure.time}</p>
+                  <p className="text-gray-500 text-sm mt-1">{ticket.departure.location}</p>
+                </div>
+
+                {/* Route Indicator - CENTER */}
+                <div className="flex flex-col items-center px-3">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <div className="w-12 h-0.5 border-t-2 border-dashed border-orange-400"></div>
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  </div>
+                  <div className="bg-orange-100 text-orange-600 text-xs font-medium px-2 py-0.5 rounded-full mt-1">
+                    {ticket.duration}
+                  </div>
+                  <p className="text-gray-400 text-xs mt-0.5">{ticket.stops}</p>
+                </div>
+
+                {/* Destination - RIGHT (NO DATE) */}
+                <div className="flex-1 text-right">
+                  <p className="text-gray-500 text-xs mb-1">Destination</p>
+                  <p className="text-gray-900 text-2xl font-bold">{ticket.arrival.time}</p>
+                  <p className="text-gray-500 text-sm mt-1">{ticket.arrival.location}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Yellow Dashed Separator */}
+            <div className="relative mb-6">
+              <div className="border-t-2 border-dashed border-yellow-400"></div>
+            </div>
+
+            {/* Bottom Row: Date (Left) | Bus & Seat (Right) */}
+            <div className="flex items-center justify-between mb-6">
+              {/* Date - Left */}
+              <div>
+                <p className="text-gray-600 text-sm font-medium">{ticket.departure.date}</p>
+              </div>
+
+              {/* Bus & Seat - Right */}
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <p className="text-gray-500 text-xs mb-1">Bus</p>
+                  <p className="text-gray-900 font-bold text-3xl">{ticket.bus}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-gray-500 text-xs mb-1">Seat</p>
+                  <p className="text-gray-900 font-bold text-3xl">{ticket.seat}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Tracking Button (if ongoing) */}
+            {ticket.status === "ongoing" && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTicketClick(ticket);
+                }}
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all mb-3 flex items-center justify-center gap-2"
+              >
+                <MapPin size={20} />
+                Klik untuk Live Tracking
+              </button>
+            )}
+
+            {/* View Details Button */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/detail-ticket/${ticket.id}`);
+              }}
+              className="w-full bg-white text-gray-700 font-semibold py-3 rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all"
+            >
+              View Detail Ticket
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+const renderHistoryCard = (ticket) => {
+  const statusBadge = getStatusBadge(ticket.status);
+
+  return (
+    <div key={ticket.id} className="shrink-0">
+      {/* DESKTOP VIEW - TIDAK DIUBAH */}
+      <div className="hidden md:flex gap-4">
         <div 
           className={`flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow ${ticket.status === "ongoing" ? "cursor-pointer" : ""}`}
           onClick={() => ticket.status === "ongoing" && handleTicketClick(ticket)}
@@ -821,7 +932,6 @@ function Home() {
                   <span className="text-xs leading-tight">Be at boarding gate 30 min before.</span>
                 </div>
               </div>
-              {/* Click to Track Indicator - Only for ongoing */}
               {ticket.status === "ongoing" && (
                 <div className="mt-4 flex items-center justify-center gap-2 text-orange-500 animate-pulse">
                   <MapPin size={16} />
@@ -906,8 +1016,110 @@ function Home() {
           )}
         </div>
       </div>
-    );
-  };
+
+      {/* MOBILE VIEW - NO SIDE NOTCHES (COMPACT) */}
+      <div className="md:hidden mb-4 px-4">
+        <div 
+          className={`relative bg-white rounded-2xl shadow-lg w-full border border-gray-200 ${ticket.status === "ongoing" ? "cursor-pointer" : ""}`}
+          onClick={() => ticket.status === "ongoing" && handleTicketClick(ticket)}
+        >
+          <div className="p-5">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <img src={GaskeunnLogo} alt="Gaskeunn" className="h-7 w-auto" />
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border-2 ${
+                ticket.status === "ongoing" ? "border-orange-500 text-orange-600 bg-white" : 
+                ticket.status === "pending" ? "border-purple-500 text-purple-600 bg-white" : 
+                ticket.status === "completed" ? "border-green-500 text-green-600 bg-white" : 
+                "border-red-500 text-red-600 bg-white"
+              }`}>
+                {ticket.status === "ongoing" ? "Ongoing" : 
+                 ticket.status === "pending" ? "Pending" : 
+                 ticket.status === "completed" ? "Completed" : "Cancelled"}
+              </span>
+            </div>
+
+            {/* HORIZONTAL LAYOUT: Departure | Route | Destination */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                {/* Departure - LEFT (NO DATE) */}
+                <div className="flex-1 text-left">
+                  <p className="text-gray-500 text-xs mb-0.5">Departure</p>
+                  <p className="text-gray-900 text-xl font-bold">{ticket.departure.time}</p>
+                  <p className="text-gray-500 text-xs mt-0.5">{ticket.departure.location}</p>
+                </div>
+
+                {/* Route Indicator - CENTER */}
+                <div className="flex flex-col items-center px-2">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                    <div className="w-8 h-0.5 border-t-2 border-dashed border-orange-400"></div>
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                  </div>
+                  <div className="bg-orange-100 text-orange-600 text-xs font-medium px-1.5 py-0.5 rounded-full mt-1">
+                    {ticket.duration}
+                  </div>
+                  <p className="text-gray-400 text-xs mt-0.5">{ticket.stops}</p>
+                </div>
+
+                {/* Destination - RIGHT (NO DATE) */}
+                <div className="flex-1 text-right">
+                  <p className="text-gray-500 text-xs mb-0.5">Destination</p>
+                  <p className="text-gray-900 text-xl font-bold">{ticket.arrival.time}</p>
+                  <p className="text-gray-500 text-xs mt-0.5">{ticket.arrival.location}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Yellow Dashed Separator */}
+            <div className="relative mb-4">
+              <div className="border-t-2 border-dashed border-yellow-400"></div>
+            </div>
+
+            {/* Bottom Row: Date (Left) | Bus & Seat (Right) */}
+            <div className="flex items-center justify-between mb-4">
+              {/* Date - Left */}
+              <div>
+                <p className="text-gray-600 text-sm font-medium">{ticket.departure.date}</p>
+              </div>
+
+              {/* Bus & Seat - Right */}
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <p className="text-gray-500 text-xs mb-1">Bus</p>
+                  <p className="text-gray-900 font-bold text-2xl">{ticket.bus}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-gray-500 text-xs mb-1">Seat</p>
+                  <p className="text-gray-900 font-bold text-2xl">{ticket.seat}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            {ticket.status === "ongoing" && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTicketClick(ticket);
+                }}
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2"
+              >
+                <MapPin size={16} />
+                Live Tracking
+              </button>
+            )}
+            {ticket.status === "pending" && (
+              <button className="w-full bg-purple-500 text-white font-semibold py-3 rounded-xl text-sm">
+                Pay Now
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   // Render Histories
   const renderHistories = () => {
@@ -1238,7 +1450,7 @@ function Home() {
                 <div
                   ref={testimonialRef}
                   onScroll={handleScroll}
-                  className={`flex gap-6 ${totalPages > 1 ? 'overflow-x-scroll scroll-smooth' : 'justify-center'} scrollbar-hide pr-5`}
+                  className={`flex gap-6 ${totalPages > 1 ? 'overflow-x-scroll scroll-smooth' : 'justify-center'} scrollbar-hide ${isMobile ? 'px-3' : 'pr-5'}`}
                   style={{
                     scrollbarWidth: "none",
                     msOverflowStyle: "none",
@@ -1250,11 +1462,13 @@ function Home() {
                       key={idx}
                       className="testimonial-card bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex flex-col h-80 shrink-0 hover:border-[oklch(0.55_0.14_243.17)] transition-colors duration-300"
                       style={{
-                        width: cardsPerSlide === 1 
-                          ? "calc(100%)" 
-                          : cardsPerSlide === 2 
-                            ? "calc((100% - 24px) / 2)" 
-                            : "calc((100% - 48px) / 3)",
+                        width: isMobile 
+                          ? "calc(100% - 24px)" 
+                          : cardsPerSlide === 1 
+                            ? "calc(100%)"
+                            : cardsPerSlide === 2
+                              ? "calc((100% - 24px) / 2)"
+                              : "calc((100% - 48px) / 3)",
                         scrollSnapAlign: idx % cardsPerSlide === 0 ? "start" : "none",
                         scrollSnapStop: idx % cardsPerSlide === 0 ? "always" : "normal",
                       }}

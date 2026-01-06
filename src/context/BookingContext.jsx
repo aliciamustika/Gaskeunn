@@ -11,37 +11,135 @@ export const useBooking = () => {
 };
 
 export const BookingProvider = ({ children }) => {
-  // Initialize bookings from localStorage or empty array
-  const [bookings, setBookings] = useState(() => {
-    const savedBookings = localStorage.getItem('gaskeunn_bookings');
-    return savedBookings ? JSON.parse(savedBookings) : [];
+  // ✅ ADD: Track current user email to detect changes
+  const [currentUserEmail, setCurrentUserEmail] = useState(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.email || null;
+      }
+    } catch (error) {
+      console.error('Error reading user email:', error);
+    }
+    return null;
   });
+
+  // Listen for localStorage changes and update currentUserEmail
+  useEffect(() => {
+    const checkUserChange = () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const newEmail = user.email || null;
+          if (newEmail !== currentUserEmail) {
+            console.log(`👤 User email changed: ${currentUserEmail} → ${newEmail}`);
+            setCurrentUserEmail(newEmail);
+          }
+        } else {
+          // User logged out
+          if (currentUserEmail !== null) {
+            console.log(`👤 User logged out (was: ${currentUserEmail})`);
+            setCurrentUserEmail(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking user change:', error);
+      }
+    };
+
+    // Check every 100ms for user changes (logout/login)
+    const interval = setInterval(checkUserChange, 100);
+    
+    // Also listen to storage events (for changes from other tabs)
+    window.addEventListener('storage', checkUserChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkUserChange);
+    };
+  }, [currentUserEmail]);
+
+  // Get user data from localStorage with proper fallback
+  const getCurrentUser = useCallback(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return {
+          email: user.email || null,
+          fullName: user.fullName || user.displayName || user.name || 'Guest',
+          binusianId: user.profile?.academic?.binusianId || user.binusianId || '-',
+          nim: user.profile?.personal?.nim || user.nim || '-',
+          program: user.profile?.academic?.program || user.program || '-',
+        };
+      }
+    } catch (error) {
+      console.error('Error getting current user:', error);
+    }
+    return null;
+  }, []);
+
+  // FIXED: Use user-specific storage key ONLY
+  const getStorageKey = useCallback(() => {
+    const user = getCurrentUser();
+    if (user && user.email) {
+      return `gaskeunn_bookings_${user.email}`;
+    }
+    return 'gaskeunn_bookings_guest';
+  }, [getCurrentUser]);
+
+  // Initialize bookings
+  const [bookings, setBookings] = useState([]);
+
+  // ✅ CRITICAL FIX: Reset/Load bookings when currentUserEmail changes
+  useEffect(() => {
+    if (!currentUserEmail) {
+      // User logged out - clear bookings
+      console.log('🔄 User logged out - clearing bookings state');
+      setBookings([]);
+      return;
+    }
+
+    // User logged in - load their bookings
+    const storageKey = `gaskeunn_bookings_${currentUserEmail}`;
+    const savedBookings = localStorage.getItem(storageKey);
+    const loadedBookings = savedBookings ? JSON.parse(savedBookings) : [];
+    
+    console.log(`🔄 User changed - reloading bookings for: ${currentUserEmail}`);
+    console.log(`📦 Loaded ${loadedBookings.length} bookings`);
+    
+    setBookings(loadedBookings);
+  }, [currentUserEmail]); // ← Re-run when user email changes!
 
   // Save to localStorage whenever bookings change
   useEffect(() => {
-    localStorage.setItem('gaskeunn_bookings', JSON.stringify(bookings));
-  }, [bookings]);
+    if (!currentUserEmail) {
+      console.warn('⚠️ Cannot save bookings: No user logged in');
+      return;
+    }
+
+    const storageKey = `gaskeunn_bookings_${currentUserEmail}`;
+    localStorage.setItem(storageKey, JSON.stringify(bookings));
+    console.log(`💾 Saved ${bookings.length} bookings to ${storageKey}`);
+  }, [bookings, currentUserEmail]);
 
   // Check and expire pending bookings + auto-complete ongoing bookings
   const checkBookingStatus = useCallback(() => {
     const now = new Date().getTime();
-    setBookings(prev => 
+    setBookings(prev =>
       prev.map(booking => {
-        // Auto-expire pending bookings after payment deadline
         if (booking.status === 'pending' && booking.paymentDeadline) {
           const deadline = new Date(booking.paymentDeadline).getTime();
           if (now > deadline) {
             return { ...booking, status: 'expired', hasBarcode: false };
           }
         }
-        // Auto-complete ongoing bookings after completion deadline
-        // Only if the journey has actually started (current time >= departure time)
         if (booking.status === 'ongoing' && booking.completionDeadline) {
-          // Parse departure time
           const departureDateTime = parseDepartureDateTime(booking.departure.date, booking.departure.time);
           const departureTime = departureDateTime.getTime();
           
-          // Only check completion if journey has started
           if (now >= departureTime) {
             const deadline = new Date(booking.completionDeadline).getTime();
             if (now > deadline) {
@@ -59,25 +157,12 @@ export const BookingProvider = ({ children }) => {
     );
   }, []);
 
-  // Check booking status every 10 seconds
   useEffect(() => {
     checkBookingStatus();
     const interval = setInterval(checkBookingStatus, 10000);
     return () => clearInterval(interval);
   }, [checkBookingStatus]);
 
-  // Get user data from localStorage
-  const getUserData = () => {
-    const user = JSON.parse(localStorage.getItem('user')) || {};
-    return {
-      name: user.name || "Ni Putu Saraswati",
-      email: user.email || "ni.saraswati@binus.ac.id",
-      binusianId: user.binusianId || "BN138092583",
-      nim: user.nim || "2902654051",
-    };
-  };
-
-  // Generate booking code
   const generateBookingCode = () => {
     const prefix = "GAS";
     const timestamp = Date.now().toString(36).toUpperCase();
@@ -85,14 +170,12 @@ export const BookingProvider = ({ children }) => {
     return `${prefix}${timestamp}${random}`.substring(0, 12);
   };
 
-  // Generate random bus and seat
   const generateBusSeat = () => {
     const bus = Math.floor(Math.random() * 3) + 1;
     const seat = Math.floor(Math.random() * 20) + 1;
     return { bus, seat };
   };
 
-  // Calculate arrival time based on departure
   const calculateArrivalTime = (departureTime) => {
     const [hours, minutes] = departureTime.split(':').map(Number);
     let arrivalHours = hours + 1;
@@ -106,9 +189,7 @@ export const BookingProvider = ({ children }) => {
     return `${arrivalHours.toString().padStart(2, '0')}:${arrivalMinutes.toString().padStart(2, '0')}`;
   };
 
-  // Helper function to parse departure date and time to Date object
   const parseDepartureDateTime = (dateStr, timeStr) => {
-    // Parse date like "19 December 2025"
     const months = {
       'January': 0, 'February': 1, 'March': 2, 'April': 3, 'May': 4, 'June': 5,
       'July': 6, 'August': 7, 'September': 8, 'October': 9, 'November': 10, 'December': 11
@@ -119,33 +200,32 @@ export const BookingProvider = ({ children }) => {
     const month = months[dateParts[1]];
     const year = parseInt(dateParts[2]);
     
-    // Parse time like "16:00" or "6:00"
     const [hours, minutes] = timeStr.split(':').map(Number);
     
     return new Date(year, month, day, hours, minutes || 0, 0, 0);
   };
 
-  // Calculate completion deadline based on departure time + 10 minutes
   const calculateCompletionDeadline = (departureDate, departureTime) => {
     const departureDateTime = parseDepartureDateTime(departureDate, departureTime);
-    // Completion deadline = departure time + 10 minutes
     return new Date(departureDateTime.getTime() + 10 * 60 * 1000).toISOString();
   };
 
-  // Create new booking
   const createBooking = (bookingData) => {
-    const userData = getUserData();
+    const currentUser = getCurrentUser();
+    
+    if (!currentUser || !currentUser.email) {
+      console.error('❌ Cannot create booking: User not logged in');
+      throw new Error('User must be logged in to create booking');
+    }
+    
     const { bus, seat } = generateBusSeat();
     const bookingCode = generateBookingCode();
-    const payNow = bookingData.payNow !== false; // default to pay now
+    const payNow = bookingData.payNow !== false;
     
-    // Calculate payment deadline (10 minutes from now) if paying later
     const paymentDeadline = !payNow 
       ? new Date(Date.now() + 10 * 60 * 1000).toISOString() 
       : null;
     
-    // Calculate completion deadline based on DEPARTURE TIME + 10 minutes (not booking time)
-    // This means the 10-minute countdown starts when the bus departs
     const completionDeadline = payNow 
       ? calculateCompletionDeadline(bookingData.departureDate, bookingData.departureTime)
       : null;
@@ -153,6 +233,8 @@ export const BookingProvider = ({ children }) => {
     const newBooking = {
       id: Date.now().toString(),
       bookingCode,
+      userId: currentUser.email,
+      userEmail: currentUser.email,
       status: payNow ? 'ongoing' : 'pending',
       departure: {
         time: bookingData.departureTime,
@@ -165,10 +247,11 @@ export const BookingProvider = ({ children }) => {
         location: bookingData.destination,
       },
       passenger: {
-        name: userData.name,
-        email: userData.email,
-        binusianId: userData.binusianId,
-        nim: userData.nim,
+        name: currentUser.fullName,
+        email: currentUser.email,
+        binusianId: currentUser.binusianId,
+        nim: currentUser.nim,
+        program: currentUser.program,
       },
       bus,
       seat,
@@ -185,11 +268,14 @@ export const BookingProvider = ({ children }) => {
       createdAt: new Date().toISOString(),
     };
 
+    console.log('✅ Creating booking for user:', currentUser.email);
+    console.log('📋 Booking code:', bookingCode);
+    console.log('🎫 Route:', `${bookingData.departure} → ${bookingData.destination}`);
+
     setBookings(prev => [newBooking, ...prev]);
     return newBooking;
   };
 
-  // Cancel booking (without refund - for unpaid tickets)
   const cancelBooking = (bookingId) => {
     setBookings(prev => 
       prev.map(booking => 
@@ -200,7 +286,6 @@ export const BookingProvider = ({ children }) => {
     );
   };
 
-  // Cancel booking with refund (for paid tickets)
   const cancelWithRefund = (bookingId) => {
     setBookings(prev => 
       prev.map(booking => {
@@ -218,7 +303,6 @@ export const BookingProvider = ({ children }) => {
     );
   };
 
-  // Complete booking
   const completeBooking = (bookingId) => {
     setBookings(prev => 
       prev.map(booking => 
@@ -229,12 +313,10 @@ export const BookingProvider = ({ children }) => {
     );
   };
 
-  // Confirm payment (change from pending to ongoing)
   const confirmPayment = (bookingId) => {
     setBookings(prev => 
       prev.map(booking => {
         if (booking.id === bookingId) {
-          // Calculate completion deadline based on DEPARTURE TIME + 10 minutes
           const completionDeadline = calculateCompletionDeadline(
             booking.departure.date, 
             booking.departure.time
@@ -255,7 +337,6 @@ export const BookingProvider = ({ children }) => {
     );
   };
 
-  // Get remaining time for payment (in seconds)
   const getRemainingPaymentTime = (bookingId) => {
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking || !booking.paymentDeadline || booking.status !== 'pending') {
@@ -267,11 +348,6 @@ export const BookingProvider = ({ children }) => {
     return remaining;
   };
 
-  // Get remaining time for completion (in seconds)
-  // Returns: 
-  //   - positive number: seconds remaining in 10-min countdown (journey started)
-  //   - 0: journey completed
-  //   - negative number: seconds until departure (journey not started yet, absolute value = seconds to wait)
   const getRemainingCompletionTime = (bookingId) => {
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking || !booking.completionDeadline || booking.status !== 'ongoing') {
@@ -281,22 +357,17 @@ export const BookingProvider = ({ children }) => {
     const now = new Date().getTime();
     const deadline = new Date(booking.completionDeadline).getTime();
     
-    // Parse departure time to check if journey has started
     const departureDateTime = parseDepartureDateTime(booking.departure.date, booking.departure.time);
     const departureTime = departureDateTime.getTime();
     
-    // If current time is before departure time, return negative value (waiting for departure)
     if (now < departureTime) {
-      // Return negative value representing seconds until departure
       return -Math.floor((departureTime - now) / 1000);
     }
     
-    // Journey has started, return remaining time in 10-min countdown
     const remaining = Math.max(0, Math.floor((deadline - now) / 1000));
     return remaining;
   };
 
-  // Check if journey has started (current time >= departure time)
   const hasJourneyStarted = (bookingId) => {
     const booking = bookings.find(b => b.id === bookingId);
     if (!booking || booking.status !== 'ongoing') {
@@ -308,7 +379,6 @@ export const BookingProvider = ({ children }) => {
     return now >= departureDateTime.getTime();
   };
 
-  // Get today's date string
   const getTodayDateString = () => {
     const today = new Date();
     return today.toLocaleDateString('en-GB', {
@@ -318,7 +388,6 @@ export const BookingProvider = ({ children }) => {
     });
   };
 
-  // Get today's tickets (ongoing or pending for today)
   const getTodayTickets = () => {
     const todayString = getTodayDateString();
     return bookings.filter(booking => 
@@ -327,13 +396,11 @@ export const BookingProvider = ({ children }) => {
     );
   };
 
-  // Get next upcoming ticket (closest to current time, today only, 1 ticket)
   const getNextUpcomingTicket = () => {
     const todayString = getTodayDateString();
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-    // Filter today's active tickets (ongoing or pending)
     const todayTickets = bookings.filter(booking => 
       booking.departure.date === todayString && 
       (booking.status === 'ongoing' || booking.status === 'pending')
@@ -341,34 +408,27 @@ export const BookingProvider = ({ children }) => {
 
     if (todayTickets.length === 0) return null;
 
-    // Convert departure time to minutes for comparison
     const getTimeInMinutes = (timeStr) => {
       const [hours, minutes] = timeStr.split(':').map(Number);
       return hours * 60 + (minutes || 0);
     };
 
-    // Sort tickets by departure time
     const sortedTickets = todayTickets.sort((a, b) => {
       const timeA = getTimeInMinutes(a.departure.time);
       const timeB = getTimeInMinutes(b.departure.time);
       return timeA - timeB;
     });
 
-    // Find the next upcoming ticket (departure time >= current time)
-    // Or if all tickets are past, return the most recent one (ongoing trip)
     let nextTicket = sortedTickets.find(ticket => {
       const departureMinutes = getTimeInMinutes(ticket.departure.time);
       return departureMinutes >= currentMinutes;
     });
 
-    // If no upcoming ticket found, check for ongoing tickets (already departed but still active)
     if (!nextTicket) {
-      // Return the last ongoing ticket (most recently departed)
       const ongoingTickets = sortedTickets.filter(t => t.status === 'ongoing');
       if (ongoingTickets.length > 0) {
         nextTicket = ongoingTickets[ongoingTickets.length - 1];
       } else {
-        // Return the closest pending ticket even if time has passed
         nextTicket = sortedTickets[0];
       }
     }
@@ -376,23 +436,27 @@ export const BookingProvider = ({ children }) => {
     return nextTicket;
   };
 
-  // Get all tickets
   const getAllTickets = () => {
+    if (!currentUserEmail) {
+      console.warn('⚠️ getAllTickets: No user logged in');
+      return [];
+    }
+    
+    console.log('🔍 getAllTickets for:', currentUserEmail);
+    console.log('📦 Total bookings:', bookings.length);
+    
     return bookings;
   };
 
-  // Get tickets by status
   const getTicketsByStatus = (status) => {
     if (status === 'all') return bookings;
     return bookings.filter(booking => booking.status === status);
   };
 
-  // Get ticket by ID
   const getTicketById = (ticketId) => {
     return bookings.find(booking => booking.id === ticketId);
   };
 
-  // Get booking statistics
   const getBookingStats = () => {
     return {
       total: bookings.length,
@@ -405,10 +469,16 @@ export const BookingProvider = ({ children }) => {
     };
   };
 
-  // Clear all bookings (for testing)
   const clearAllBookings = () => {
+    if (!currentUserEmail) {
+      console.warn('⚠️ Cannot clear bookings: No user logged in');
+      return;
+    }
+    
+    const storageKey = `gaskeunn_bookings_${currentUserEmail}`;
     setBookings([]);
-    localStorage.removeItem('gaskeunn_bookings');
+    localStorage.removeItem(storageKey);
+    console.log('🗑️ Cleared all bookings for', currentUserEmail);
   };
 
   const value = {

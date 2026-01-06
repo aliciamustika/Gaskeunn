@@ -5,66 +5,196 @@ import {
   FaGithub,
   FaLinkedinIn,
   FaMicrosoft,
+  FaApple,
+  FaArrowLeft
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-// Data user untuk login (tanpa API)
+// Data user untuk login dengan profile lengkap
 const USERS = [
   {
     email: 'ni.saraswati@binus.ac.id',
     password: '11223344',
     role: 'penumpang',
-    name: 'Ni Saraswati',
-    redirectTo: '/home'
+    fullName: 'Ni Putu Saraswati',
+    displayName: 'Saras',
+    redirectTo: '/home',
+    profile: {
+      personal: {
+        nim: '2902624635',
+        memberSince: 'August 2025',
+        birthDate: '14 April 2007',
+        gender: 'Perempuan',
+        phone: '+62 812 3867 9998',
+        linkedin: 'linkedin.com/in/niputusaraswati'
+      },
+      academic: {
+        binusianId: 'BN138092583',
+        program: 'Computer Science',
+        degreeTitle: 'Bachelor of Computer Science',
+        homeCampus: 'Malang',
+        stream: 'Software Engineering',
+        enrichmentTrack: 'Artificial Intelligence',
+        class: 'LA20'
+      }
+    }
   },
   {
     email: 'verena.cheryl@binus.ac.id',
     password: '11223344',
     role: 'penumpang',
-    name: 'Verena Cheryl',
-    redirectTo: '/home'
+    fullName: 'Verena Cheryl Elby Mardani',
+    displayName: 'Cheryl',
+    redirectTo: '/home',
+    profile: {
+      personal: {
+        nim: '2902583824',
+        memberSince: 'December 2024',
+        birthDate: '15 March 2007',
+        gender: 'Perempuan',
+        phone: '+62 877 5719 9244',
+        linkedin: 'linkedin.com/in/verenacheryl'
+      },
+      academic: {
+        binusianId: 'BN138092583',
+        program: 'Computer Science',
+        degreeTitle: 'Bachelor of Computer Science',
+        homeCampus: 'Malang',
+        stream: 'Software Engineering',
+        enrichmentTrack: 'Data Science',
+        class: 'LA20'
+      }
+    }
   },
   {
     email: 'kyoko.angela@binus.ac.id',
     password: '11223344',
     role: 'penumpang',
-    name: 'Kyoko Angela',
-    redirectTo: '/home'
+    fullName: 'Kyoko Angela Sientargo',
+    displayName: 'Kyoko',
+    redirectTo: '/home',
+    profile: {
+      personal: {
+        nim: '2902606651',
+        memberSince: 'August 2025',
+        birthDate: '24 September 2007',
+        gender: 'Perempuan',
+        phone: '+62 895 3971 19270',
+        linkedin: 'linkedin.com/in/kyokoangela'
+      },
+      academic: {
+        binusianId: 'BN138092583',
+        program: 'Computer Science',
+        degreeTitle: 'Bachelor of Computer Science',
+        homeCampus: 'Malang',
+        stream: 'Software Engineering',
+        enrichmentTrack: 'Cyber Security',
+        class: 'LA20'
+      }
+    }
   },
   {
     email: 'alicia.mustika@binus.ac.id',
     password: '11223344',
     role: 'penumpang',
-    name: 'Alicia Mustika',
-    redirectTo: '/home'
+    fullName: 'Alicia Mustika Setyoayu',
+    displayName: 'Alicia',
+    redirectTo: '/home',
+    profile: {
+      personal: {
+        nim: '2902654054',
+        memberSince: 'August 2025',
+        birthDate: '31 March 2007',
+        gender: 'Perempuan',
+        phone: '+62 857 8554 6217',
+        linkedin: 'linkedin.com/in/aliciamustika'
+      },
+      academic: {
+        binusianId: 'BN138092583',
+        program: 'Computer Science',
+        degreeTitle: 'Bachelor of Computer Science',
+        homeCampus: 'Malang',
+        stream: 'Software Engineering',
+        enrichmentTrack: 'Mobile Development',
+        class: 'LA20'
+      }
+    }
   },
   {
     email: 'sopir.binus@gaskeunn.com',
     password: '11223344',
     role: 'sopir',
-    name: 'Budi Suginto',
-    redirectTo: '/homesopir'
+    fullName: 'Budi Santoso',
+    displayName: 'Pak Budi',
+    redirectTo: '/homesopir',
+    profile: {
+      personal: {
+        nim: '-',
+        memberSince: 'November 2024',
+        birthDate: '5 Juli 1985',
+        gender: 'Laki-laki',
+        phone: '+62 821 1234 5678',
+        linkedin: '-'
+      },
+      academic: {
+        binusianId: '-',
+        program: 'Driver',
+        degreeTitle: 'Professional Driver',
+        homeCampus: 'Malang',
+        stream: '-',
+        enrichmentTrack: '-',
+        class: '-'
+      }
+    }
   },
   {
     email: 'admin@gaskeunn.com',
     password: 'admin123',
     role: 'admin',
-    name: 'Admin Gaskeunn',
-    redirectTo: '/adminpage'
+    fullName: 'Admin Gaskeunn',
+    displayName: 'Admin',
+    redirectTo: '/adminpage',
+    profile: {
+      personal: {
+        nim: '-',
+        memberSince: 'January 2024',
+        birthDate: '1 Januari 1990',
+        gender: 'Laki-laki',
+        phone: '+62 811 9999 8888',
+        linkedin: '-'
+      },
+      academic: {
+        binusianId: '-',
+        program: 'Administrator',
+        degreeTitle: 'System Administrator',
+        homeCampus: 'Headquarters',
+        stream: '-',
+        enrichmentTrack: '-',
+        class: '-'
+      }
+    }
   }
 ];
 
-const AuthInput = ({ type, placeholder, value, onChange }) => (
-  <input
-    type={type}
-    placeholder={placeholder}
-    value={value}
-    onChange={onChange}
-    className="w-full px-4 py-3 rounded-lg bg-gray-100 text-gray-700 
-      border border-gray-300 transition-all duration-300 ease-out outline-none
-      hover:border-indigo-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-300"
-    required
-  />
+const AuthInput = ({ type, placeholder, value, onChange, icon: Icon }) => (
+  <div className="relative w-full">
+    {Icon && (
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+        <Icon className="text-lg" />
+      </div>
+    )}
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      className={`w-full ${Icon ? 'pl-12 pr-4' : 'px-4'} py-3.5 rounded-xl bg-gray-50 text-gray-700 
+        border border-gray-200 transition-all duration-300 ease-out outline-none
+        hover:border-[#2B8CCD] focus:border-[#2B8CCD] 
+        focus:ring-2 focus:ring-[#2B8CCD]/20 md:rounded-lg md:bg-gray-100`}
+      required
+    />
+  </div>
 );
 
 const SocialButton = ({ Icon, onClick, label }) => (
@@ -72,11 +202,11 @@ const SocialButton = ({ Icon, onClick, label }) => (
     type="button"
     onClick={onClick}
     aria-label={label}
-    className="w-9 h-9 border border-gray-300 rounded-md flex items-center justify-center 
-      text-gray-600 hover:text-[oklch(0.6155_0.1314_243.17)] hover:border-[oklch(0.55_0.14_243.17)] 
-      transition duration-300 text-sm"
+    className="w-12 h-12 md:w-9 md:h-9 border border-gray-300 rounded-full md:rounded-md 
+      flex items-center justify-center text-gray-600 hover:text-[#2B8CCD] 
+      hover:border-[#2B8CCD] transition duration-300 bg-white shadow-sm hover:shadow-md"
   >
-    <Icon className="text-base" />
+    <Icon className="text-xl md:text-base" />
   </button>
 );
 
@@ -92,8 +222,11 @@ function Authentication() {
 
   // Sign Up state
   const [signUpName, setSignUpName] = useState("");
+  const [signUpNim, setSignUpNim] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
+  const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
+  const [signUpPhone, setSignUpPhone] = useState("");
   const [signUpError, setSignUpError] = useState("");
   const [isSignUpLoading, setIsSignUpLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
@@ -104,33 +237,28 @@ function Authentication() {
     setSignInError("");
     setIsSignInLoading(true);
 
-    // Validasi input kosong
     if (!signInEmail || !signInPassword) {
       setSignInError("Please fill in all fields");
       setIsSignInLoading(false);
       return;
     }
 
-    // Simulasi delay seperti API call
     setTimeout(() => {
-      // Cari user yang cocok
       const user = USERS.find(
         u => u.email.toLowerCase() === signInEmail.toLowerCase() && u.password === signInPassword
       );
 
       if (user) {
-        // Login berhasil - simpan ke localStorage
         localStorage.setItem('user', JSON.stringify({
           email: user.email,
-          name: user.name,
+          fullName: user.fullName,
+          displayName: user.displayName,
           role: user.role,
-          isLoggedIn: true
+          isLoggedIn: true,
+          profile: user.profile
         }));
-
-        // Redirect sesuai role
         navigate(user.redirectTo);
       } else {
-        // Login gagal
         setSignInError("Invalid email or password");
       }
       
@@ -144,14 +272,18 @@ function Authentication() {
     setSignUpError("");
     setIsSignUpLoading(true);
 
-    // Validasi input kosong
-    if (!signUpName || !signUpEmail || !signUpPassword) {
-      setSignUpError("Please fill in all fields");
+    if (!signUpEmail || !signUpPassword || !signUpConfirmPassword || !signUpNim || !signUpPhone) {
+      setSignUpError("Please fill in all required fields");
       setIsSignUpLoading(false);
       return;
     }
 
-    // Validasi email format
+    if (signUpPassword !== signUpConfirmPassword) {
+      setSignUpError("Passwords do not match");
+      setIsSignUpLoading(false);
+      return;
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(signUpEmail)) {
       setSignUpError("Please enter a valid email address");
@@ -159,14 +291,12 @@ function Authentication() {
       return;
     }
 
-    // Validasi password minimal 6 karakter
     if (signUpPassword.length < 6) {
       setSignUpError("Password must be at least 6 characters");
       setIsSignUpLoading(false);
       return;
     }
 
-    // Cek apakah email sudah terdaftar
     const existingUser = USERS.find(
       u => u.email.toLowerCase() === signUpEmail.toLowerCase()
     );
@@ -177,87 +307,119 @@ function Authentication() {
       return;
     }
 
-    // Simulasi delay
     setTimeout(() => {
-      // Tambahkan user baru ke array (dalam real app, ini akan ke database)
       const newUser = {
         email: signUpEmail,
         password: signUpPassword,
         role: 'penumpang',
-        name: signUpName,
-        redirectTo: '/passenger/home'
+        fullName: signUpName || signUpEmail.split('@')[0],
+        displayName: signUpName ? signUpName.split(' ')[0] : signUpEmail.split('@')[0],
+        redirectTo: '/home',
+        profile: {
+          personal: {
+            nim: signUpNim,
+            memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            birthDate: '-',
+            gender: '-',
+            phone: signUpPhone,
+            linkedin: '-'
+          },
+          academic: {
+            binusianId: '-',
+            program: 'Computer Science',
+            degreeTitle: 'Bachelor of Computer Science',
+            homeCampus: 'Malang',
+            stream: '-',
+            enrichmentTrack: '-',
+            class: '-'
+          }
+        }
       };
       
       USERS.push(newUser);
 
-      // Simpan ke localStorage
       localStorage.setItem('user', JSON.stringify({
         email: newUser.email,
-        name: newUser.name,
+        fullName: newUser.fullName,
+        displayName: newUser.displayName,
         role: newUser.role,
-        isLoggedIn: true
+        isLoggedIn: true,
+        profile: newUser.profile
       }));
 
       setSignUpSuccess(true);
       setIsSignUpLoading(false);
 
-      // Redirect setelah 1 detik
       setTimeout(() => {
-        navigate('/passenger/home');
+        navigate('/home');
       }, 1000);
     }, 800);
   };
 
   const handleMicrosoftSignIn = () => {
-    console.log("Initiating Microsoft Sign In...");
-    // Untuk demo, langsung redirect
-    localStorage.setItem('user', JSON.stringify({
+    const microsoftUser = {
       email: 'microsoft.user@binus.ac.id',
-      name: 'Microsoft User',
+      fullName: 'Microsoft User Account',
+      displayName: 'Microsoft User',
       role: 'penumpang',
-      isLoggedIn: true
-    }));
-    navigate("/passenger/home");
+      isLoggedIn: true,
+      profile: {
+        personal: {
+          nim: '-',
+          memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          birthDate: '-',
+          gender: '-',
+          phone: '-',
+          linkedin: '-'
+        },
+        academic: {
+          binusianId: '-',
+          program: 'Computer Science',
+          degreeTitle: 'Bachelor of Computer Science',
+          homeCampus: 'Malang',
+          stream: '-',
+          enrichmentTrack: '-',
+          class: '-'
+        }
+      }
+    };
+    localStorage.setItem('user', JSON.stringify(microsoftUser));
+    navigate("/home");
   };
 
   const handleSocialSignIn = (provider) => {
-    console.log(`Sign in with ${provider}`);
-    // Untuk demo, langsung redirect
-    localStorage.setItem('user', JSON.stringify({
+    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    const socialUser = {
       email: `${provider}.user@binus.ac.id`,
-      name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} User`,
+      fullName: `${providerName} User Account`,
+      displayName: `${providerName} User`,
       role: 'penumpang',
-      isLoggedIn: true
-    }));
-    navigate("/passenger/home");
+      isLoggedIn: true,
+      profile: {
+        personal: {
+          nim: '-',
+          memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          birthDate: '-',
+          gender: '-',
+          phone: '-',
+          linkedin: '-'
+        },
+        academic: {
+          binusianId: '-',
+          program: 'Computer Science',
+          degreeTitle: 'Bachelor of Computer Science',
+          homeCampus: 'Malang',
+          stream: '-',
+          enrichmentTrack: '-',
+          class: '-'
+        }
+      }
+    };
+    localStorage.setItem('user', JSON.stringify(socialUser));
+    navigate("/home");
   };
 
-  // Clear error when user types
-  const handleSignInEmailChange = (e) => {
-    setSignInEmail(e.target.value);
-    if (signInError) setSignInError("");
-  };
-
-  const handleSignInPasswordChange = (e) => {
-    setSignInPassword(e.target.value);
-    if (signInError) setSignInError("");
-  };
-
-  const handleSignUpNameChange = (e) => {
-    setSignUpName(e.target.value);
-    if (signUpError) setSignUpError("");
-  };
-
-  const handleSignUpEmailChange = (e) => {
-    setSignUpEmail(e.target.value);
-    if (signUpError) setSignUpError("");
-  };
-
-  const handleSignUpPasswordChange = (e) => {
-    setSignUpPassword(e.target.value);
-    if (signUpError) setSignUpError("");
-  };
-
+  // Social providers untuk mobile dan desktop (sama: Google, Facebook, GitHub, LinkedIn)
   const socialProviders = [
     { Icon: FaGoogle, label: "Google", provider: "google" },
     { Icon: FaFacebookF, label: "Facebook", provider: "facebook" },
@@ -266,126 +428,74 @@ function Authentication() {
   ];
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-100 via-indigo-50 to-purple-100 flex items-center justify-center p-4">
-      <div
-        className="relative bg-white rounded-[40px] shadow-2xl max-w-4xl w-full overflow-hidden"
-        style={{ height: "550px" }}
-      >
-        {/* CONTAINER dengan relative positioning untuk forms */}
-        <div className="relative h-full w-full">
-          {/* PURPLE BLOB PANEL - Layer paling atas dengan animasi sliding */}
-          <div
-            className="absolute top-0 h-full w-full md:w-1/2 bg-[linear-gradient(to_right,#2B8CCD_0%,#83B1D1_100%)]
-              flex items-center justify-center p-8 md:p-12 text-white overflow-hidden
-              transition-all duration-1000 ease-in-out z-30"
-            style={{
-              left: isSignUpMode ? "0%" : "50%",
-              borderRadius: isSignUpMode ? "0 35% 35% 0" : "35% 0 0 35%",
-              boxShadow: isSignUpMode
-                ? "-10px 0 30px rgba(0, 0, 0, 0.2)"
-                : "10px 0 30px rgba(0, 0, 0, 0.2)",
-            }}
-          >
-            {/* CONTENT FOR SIGN IN MODE (Panel di kanan) */}
-            <div
-              className={`text-center transition-all duration-500 ${
-                isSignUpMode
-                  ? "opacity-0 absolute pointer-events-none scale-95"
-                  : "opacity-100 scale-100"
-              }`}
-            >
-              <h1 className="text-4xl md:text-5xl font-bold mb-5">
-                Hello, Binusian!
-              </h1>
-              <p className="text-base md:text-lg mb-8 leading-relaxed px-6 font-light">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* MOBILE VIEW */}
+      <div className="md:hidden min-h-screen flex flex-col">
+        {!isSignUpMode ? (
+          // MOBILE SIGN IN
+          <div className="flex flex-col min-h-screen">
+            {/* Header - Extended padding bottom for overlap */}
+            <div className="bg-[linear-gradient(to_right,#2B8CCD_0%,#83B1D1_100%)] pt-12 pb-20 px-6">
+              <h1 className="text-4xl font-bold text-white mb-3">Hello, Binusian!</h1>
+              <p className="text-white/90 text-sm leading-relaxed">
                 Register with your personal details to use all of site features
               </p>
-              <button
-                onClick={() => setIsSignUpMode(true)}
-                className="px-12 py-2.5 border-2 border-white rounded-full font-medium 
-                  hover:bg-white hover:text-[oklch(0.6155_0.1314_243.17)] transition-all duration-300 
-                  uppercase tracking-wide text-sm active:scale-95 shadow-lg hover:shadow-xl"
-              >
-                SIGN UP
-              </button>
             </div>
 
-            {/* CONTENT FOR SIGN UP MODE (Panel di kiri) */}
-            <div
-              className={`text-center transition-all duration-500 ${
-                isSignUpMode
-                  ? "opacity-100 scale-100"
-                  : "opacity-0 absolute pointer-events-none scale-95"
-              }`}
-            >
-              <h1 className="text-4xl md:text-5xl font-bold mb-5">
-                Welcome Back!
-              </h1>
-              <p className="text-base md:text-lg mb-8 leading-relaxed px-6 font-light">
-                Enter your personal details to use all of site features
-              </p>
-              <button
-                onClick={() => setIsSignUpMode(false)}
-                className="px-12 py-2.5 border-2 border-white rounded-full font-medium 
-                  hover:bg-white hover:text-[oklch(0.6155_0.1314_243.17)] transition-all duration-300 
-                  uppercase tracking-wide text-sm active:scale-95 shadow-lg hover:shadow-xl"
-              >
-                SIGN IN
-              </button>
-            </div>
-          </div>
+            {/* Form Container - Overlapping with negative margin and relative z-index */}
+            <div className="flex-1 bg-white rounded-t-[40px] px-6 pt-8 pb-6 -mt-8 relative z-10">
+              <h2 className="text-3xl font-bold text-[#2B8CCD] mb-6">Sign In</h2>
 
-          {/* SIGN IN FORM - Layer bawah kiri */}
-          <div
-            className={`absolute left-0 top-0 h-full w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 
-              bg-white transition-all duration-800 ease-in-out z-10
-              ${
-                isSignUpMode
-                  ? "md:translate-x-full opacity-0 pointer-events-none"
-                  : "md:translate-x-0 opacity-100"
-              }`}
-          >
-            <div className="w-full max-w-sm flex flex-col items-center">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4 text-center">
-                Sign In
-              </h2>
-
-              {/* Error Message */}
               {signInError && (
-                <div className="w-full mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
                   <p className="text-sm text-red-600 text-center">{signInError}</p>
                 </div>
               )}
 
-              <form onSubmit={handleSignIn} className="space-y-4 w-full">
+              <form onSubmit={handleSignIn} className="space-y-4">
                 <AuthInput
                   type="email"
                   placeholder="Email"
                   value={signInEmail}
-                  onChange={handleSignInEmailChange}
+                  onChange={(e) => {
+                    setSignInEmail(e.target.value);
+                    if (signInError) setSignInError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  )}
                 />
+
                 <AuthInput
                   type="password"
                   placeholder="Password"
                   value={signInPassword}
-                  onChange={handleSignInPasswordChange}
+                  onChange={(e) => {
+                    setSignInPassword(e.target.value);
+                    if (signInError) setSignInError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  )}
                 />
 
-                <div className="text-sm text-right">
-                  <a
-                    href="#"
-                    className="text-[oklch(0.6155_0.1314_243.17)] hover:text-[oklch(0.55_0.14_243.17)] transition duration-200"
-                  >
-                    Forget Your Password?
+                <div className="text-right">
+                  <a href="#" className="text-sm text-[#2B8CCD] hover:text-[#1e7ba8] transition duration-200">
+                    Forgot Password?
                   </a>
                 </div>
 
+                {/* Login Button */}
                 <button
                   type="submit"
                   disabled={isSignInLoading}
-                  className="w-full py-3 bg-[oklch(0.6155_0.1314_243.17)] text-white font-semibold rounded-lg 
-                    hover:bg-[oklch(0.55_0.14_243.17)] transition duration-300 shadow-md hover:shadow-lg uppercase
-                    disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-[#2B8CCD] text-white font-semibold rounded-full
+                    hover:bg-[#1e7ba8] transition duration-300 shadow-lg hover:shadow-xl
+                    disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
                 >
                   {isSignInLoading ? (
                     <>
@@ -393,103 +503,193 @@ function Authentication() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      SIGNING IN...
+                      Logging in...
                     </>
                   ) : (
-                    'SIGN IN'
+                    'Login'
                   )}
                 </button>
 
+                {/* Microsoft Sign In Button */}
                 <button
                   type="button"
                   onClick={handleMicrosoftSignIn}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 mb-4
-                  bg-[#2F2F2F] hover:bg-[#1a1a1a] text-white rounded-lg
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3
+                  bg-[#2F2F2F] hover:bg-[#1a1a1a] text-white rounded-full
                   transition duration-300 text-sm font-medium shadow-md hover:shadow-lg"
                 >
                   <FaMicrosoft className="text-lg" />
                   Sign in with Microsoft
                 </button>
 
-                <div className="flex justify-center gap-2 mb-4 w-full">
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500">Or login with</span>
+                  </div>
+                </div>
+
+                {/* Social Buttons */}
+                <div className="flex justify-center gap-3">
                   {socialProviders.map(({ Icon, label, provider }, index) => (
                     <SocialButton
                       key={index}
                       Icon={Icon}
                       label={`Sign in with ${label}`}
-                      onClick={() =>
-                        provider === "microsoft"
-                          ? handleMicrosoftSignIn()
-                          : handleSocialSignIn(provider)
-                      }
+                      onClick={() => handleSocialSignIn(provider)}
                     />
                   ))}
                 </div>
-              </form>
 
-              {/* Demo Credentials */}
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg w-full">
-                <p className="text-xs text-gray-500 text-center mb-1">Demo Credentials:</p>
-                <p className="text-xs text-gray-600 text-center">ni.putu@binus.ac.id / 11223344</p>
-              </div>
+                <div className="text-center mt-6">
+                  <p className="text-gray-600">
+                    Don't have account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsSignUpMode(true)}
+                      className="text-[#2B8CCD] font-semibold hover:text-[#1e7ba8] transition duration-200"
+                    >
+                      Sign Up
+                    </button>
+                  </p>
+                </div>
+              </form>
             </div>
           </div>
+        ) : (
+          // MOBILE SIGN UP
+          <div className="flex flex-col min-h-screen">
+            {/* Header with Back Button - Extended padding bottom for overlap */}
+            <div className="bg-[linear-gradient(to_right,#2B8CCD_0%,#83B1D1_100%)] pt-12 pb-20 px-6">
+              <button
+                onClick={() => setIsSignUpMode(false)}
+                className="flex items-center gap-2 text-white mb-6 hover:opacity-80 transition"
+              >
+                <FaArrowLeft className="text-lg" />
+                <span className="text-sm">Back to login</span>
+              </button>
+              <h1 className="text-4xl font-bold text-white mb-3">Create Account</h1>
+              <p className="text-white/90 text-sm leading-relaxed">
+                Register with your personal details to use all of site features
+              </p>
+            </div>
 
-          {/* SIGN UP FORM - Layer bawah kanan */}
-          <div
-            className={`absolute right-0 top-0 h-full w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 
-              bg-white transition-all duration-800 ease-in-out z-10
-              ${
-                isSignUpMode
-                  ? "md:translate-x-0 opacity-100"
-                  : "md:-translate-x-full opacity-0 pointer-events-none"
-              }`}
-          >
-            <div className="w-full max-w-sm flex flex-col items-center">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4 text-center">
-                Create Account
-              </h2>
+            {/* Form Container - Overlapping with negative margin and relative z-index */}
+            <div className="flex-1 bg-white rounded-t-[40px] px-6 pt-8 pb-6 -mt-8 relative z-10 overflow-y-auto">
+              <h2 className="text-3xl font-bold text-[#2B8CCD] mb-6">Sign Up</h2>
 
-              {/* Error Message */}
               {signUpError && (
-                <div className="w-full mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
                   <p className="text-sm text-red-600 text-center">{signUpError}</p>
                 </div>
               )}
 
-              {/* Success Message */}
               {signUpSuccess && (
-                <div className="w-full mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl">
                   <p className="text-sm text-green-600 text-center">Account created successfully! Redirecting...</p>
                 </div>
               )}
 
-              <form onSubmit={handleSignUp} className="space-y-3 w-full">
+              <form onSubmit={handleSignUp} className="space-y-4">
                 <AuthInput
                   type="text"
-                  placeholder="Name"
+                  placeholder="Full Name"
                   value={signUpName}
-                  onChange={handleSignUpNameChange}
+                  onChange={(e) => {
+                    setSignUpName(e.target.value);
+                    if (signUpError) setSignUpError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  )}
                 />
+
+                <AuthInput
+                  type="text"
+                  placeholder="NIM"
+                  value={signUpNim}
+                  onChange={(e) => {
+                    setSignUpNim(e.target.value);
+                    if (signUpError) setSignUpError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                    </svg>
+                  )}
+                />
+
                 <AuthInput
                   type="email"
                   placeholder="Email"
                   value={signUpEmail}
-                  onChange={handleSignUpEmailChange}
+                  onChange={(e) => {
+                    setSignUpEmail(e.target.value);
+                    if (signUpError) setSignUpError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  )}
                 />
+
+                <AuthInput
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={signUpPhone}
+                  onChange={(e) => {
+                    setSignUpPhone(e.target.value);
+                    if (signUpError) setSignUpError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  )}
+                />
+
                 <AuthInput
                   type="password"
                   placeholder="Password"
                   value={signUpPassword}
-                  onChange={handleSignUpPasswordChange}
+                  onChange={(e) => {
+                    setSignUpPassword(e.target.value);
+                    if (signUpError) setSignUpError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  )}
                 />
 
+                <AuthInput
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={signUpConfirmPassword}
+                  onChange={(e) => {
+                    setSignUpConfirmPassword(e.target.value);
+                    if (signUpError) setSignUpError("");
+                  }}
+                  icon={() => (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                />
+
+                {/* Sign Up Button */}
                 <button
                   type="submit"
                   disabled={isSignUpLoading || signUpSuccess}
-                  className="w-full py-3 bg-[oklch(0.6155_0.1314_243.17)] text-white font-semibold rounded-lg 
-                    hover:bg-[oklch(0.55_0.14_243.17)] transition duration-300 shadow-md hover:shadow-lg uppercase mt-2
-                    disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-[#2B8CCD] text-white font-semibold rounded-full
+                    hover:bg-[#1e7ba8] transition duration-300 shadow-lg hover:shadow-xl
+                    disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
                 >
                   {isSignUpLoading ? (
                     <>
@@ -497,43 +697,274 @@ function Authentication() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      CREATING ACCOUNT...
+                      Creating account...
                     </>
                   ) : signUpSuccess ? (
-                    'SUCCESS!'
+                    'Success!'
                   ) : (
-                    'SIGN UP'
+                    'Sign Up'
                   )}
                 </button>
-
-                {/* Microsoft Sign Up Button - Prominent */}
-                <button
-                  type="button"
-                  onClick={handleMicrosoftSignIn}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 mb-4
-                  bg-[#2F2F2F] hover:bg-[#1a1a1a] text-white rounded-lg
-                  transition duration-300 text-sm font-medium shadow-md hover:shadow-lg"
-                >
-                  <FaMicrosoft className="text-lg" />
-                  Sign up with Microsoft
-                </button>
-
-                {/* Social Media Icons */}
-                <div className="flex justify-center gap-2 mb-4 w-full">
-                  {socialProviders.map(({ Icon, label, provider }, index) => (
-                    <SocialButton
-                      key={index}
-                      Icon={Icon}
-                      label={`Sign up with ${label}`}
-                      onClick={() =>
-                        provider === "microsoft"
-                          ? handleMicrosoftSignIn()
-                          : handleSocialSignIn(provider)
-                      }
-                    />
-                  ))}
-                </div>
               </form>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP VIEW */}
+      <div className="hidden md:flex items-center justify-center p-4 min-h-screen">
+        <div className="relative bg-white rounded-[40px] shadow-2xl max-w-4xl w-full overflow-hidden" style={{ height: "650px" }}>
+          <div className="relative h-full w-full">
+            {/* PURPLE BLOB PANEL */}
+            <div
+              className="absolute top-0 h-full w-1/2 bg-[linear-gradient(to_right,#2B8CCD_0%,#83B1D1_100%)]
+                flex items-center justify-center p-12 text-white overflow-hidden
+                transition-all duration-1000 ease-in-out z-30"
+              style={{
+                left: isSignUpMode ? "0%" : "50%",
+                borderRadius: isSignUpMode ? "0 35% 35% 0" : "35% 0 0 35%",
+                boxShadow: isSignUpMode
+                  ? "-10px 0 30px rgba(0, 0, 0, 0.2)"
+                  : "10px 0 30px rgba(0, 0, 0, 0.2)",
+              }}
+            >
+              {/* CONTENT FOR SIGN IN MODE */}
+              <div className={`text-center transition-all duration-500 ${isSignUpMode ? "opacity-0 absolute pointer-events-none scale-95" : "opacity-100 scale-100"}`}>
+                <h1 className="text-5xl font-bold mb-5">Hello, Binusian!</h1>
+                <p className="text-lg mb-8 leading-relaxed px-6 font-light">
+                  Register with your personal details to use all of site features
+                </p>
+                <button
+                  onClick={() => setIsSignUpMode(true)}
+                  className="px-12 py-2.5 border-2 border-white rounded-full font-medium 
+                    hover:bg-white hover:text-[#2B8CCD] transition-all duration-300 
+                    uppercase tracking-wide text-sm active:scale-95 shadow-lg hover:shadow-xl"
+                >
+                  SIGN UP
+                </button>
+              </div>
+
+              {/* CONTENT FOR SIGN UP MODE */}
+              <div className={`text-center transition-all duration-500 ${isSignUpMode ? "opacity-100 scale-100" : "opacity-0 absolute pointer-events-none scale-95"}`}>
+                <h1 className="text-5xl font-bold mb-5">Welcome Back!</h1>
+                <p className="text-lg mb-8 leading-relaxed px-6 font-light">
+                  Enter your personal details to use all of site features
+                </p>
+                <button
+                  onClick={() => setIsSignUpMode(false)}
+                  className="px-12 py-2.5 border-2 border-white rounded-full font-medium 
+                    hover:bg-white hover:text-[#2B8CCD] transition-all duration-300 
+                    uppercase tracking-wide text-sm active:scale-95 shadow-lg hover:shadow-xl"
+                >
+                  SIGN IN
+                </button>
+              </div>
+            </div>
+
+            {/* SIGN IN FORM */}
+            <div className={`absolute left-0 top-0 h-full w-1/2 flex items-center justify-center p-12 bg-white transition-all duration-800 ease-in-out z-10 ${isSignUpMode ? "translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"}`}>
+              <div className="w-full max-w-sm flex flex-col items-center">
+                <h2 className="text-4xl font-bold text-gray-900 mb-6 text-center">Sign In</h2>
+
+                {signInError && (
+                  <div className="w-full mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600 text-center">{signInError}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSignIn} className="space-y-3 w-full">
+                  <AuthInput 
+                    type="email" 
+                    placeholder="Email" 
+                    value={signInEmail} 
+                    onChange={(e) => {
+                      setSignInEmail(e.target.value);
+                      if (signInError) setSignInError("");
+                    }} 
+                  />
+                  <AuthInput 
+                    type="password" 
+                    placeholder="Password" 
+                    value={signInPassword} 
+                    onChange={(e) => {
+                      setSignInPassword(e.target.value);
+                      if (signInError) setSignInError("");
+                    }} 
+                  />
+
+                  <div className="text-sm text-right pb-2">
+                    <a href="#" className="text-[#2B8CCD] hover:text-[#1e7ba8] transition duration-200">
+                      Forgot Password?
+                    </a>
+                  </div>
+
+                  <div className="pt-2 space-y-3">
+                    <button
+                      type="submit"
+                      disabled={isSignInLoading}
+                      className="w-full py-3 bg-[#2B8CCD] text-white font-semibold rounded-lg 
+                        hover:bg-[#1e7ba8] transition duration-300 shadow-md hover:shadow-lg uppercase
+                        disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSignInLoading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          SIGNING IN...
+                        </>
+                      ) : (
+                        'SIGN IN'
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleMicrosoftSignIn}
+                      className="w-full flex items-center justify-center gap-3 px-4 py-2.5
+                      bg-[#2F2F2F] hover:bg-[#1a1a1a] text-white rounded-lg
+                      transition duration-300 text-sm font-medium shadow-md hover:shadow-lg"
+                    >
+                      <FaMicrosoft className="text-lg" />
+                      Sign in with Microsoft
+                    </button>
+
+                    <div className="flex justify-center gap-2 w-full">
+                      {socialProviders.map(({ Icon, label, provider }, index) => (
+                        <SocialButton
+                          key={index}
+                          Icon={Icon}
+                          label={`Sign in with ${label}`}
+                          onClick={() => handleSocialSignIn(provider)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* SIGN UP FORM */}
+            <div className={`absolute right-0 top-0 h-full w-1/2 flex items-center justify-center p-8 bg-white transition-all duration-800 ease-in-out z-10 overflow-y-auto ${isSignUpMode ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"}`}>
+              <div className="w-full max-w-sm flex flex-col items-center py-4">
+                <h2 className="text-4xl font-bold text-gray-900 mb-4 text-center">Create Account</h2>
+
+                {signUpError && (
+                  <div className="w-full mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-xs text-red-600 text-center">{signUpError}</p>
+                  </div>
+                )}
+
+                {signUpSuccess && (
+                  <div className="w-full mb-3 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-xs text-green-600 text-center">Account created successfully! Redirecting...</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSignUp} className="space-y-2.5 w-full">
+                  <AuthInput 
+                    type="text" 
+                    placeholder="Full Name" 
+                    value={signUpName} 
+                    onChange={(e) => {
+                      setSignUpName(e.target.value);
+                      if (signUpError) setSignUpError("");
+                    }} 
+                  />
+                  <AuthInput 
+                    type="text" 
+                    placeholder="NIM" 
+                    value={signUpNim} 
+                    onChange={(e) => {
+                      setSignUpNim(e.target.value);
+                      if (signUpError) setSignUpError("");
+                    }} 
+                  />
+                  <AuthInput 
+                    type="email" 
+                    placeholder="Email" 
+                    value={signUpEmail} 
+                    onChange={(e) => {
+                      setSignUpEmail(e.target.value);
+                      if (signUpError) setSignUpError("");
+                    }} 
+                  />
+                  <AuthInput 
+                    type="tel" 
+                    placeholder="Phone Number" 
+                    value={signUpPhone} 
+                    onChange={(e) => {
+                      setSignUpPhone(e.target.value);
+                      if (signUpError) setSignUpError("");
+                    }} 
+                  />
+                  <AuthInput 
+                    type="password" 
+                    placeholder="Password" 
+                    value={signUpPassword} 
+                    onChange={(e) => {
+                      setSignUpPassword(e.target.value);
+                      if (signUpError) setSignUpError("");
+                    }} 
+                  />
+                  <AuthInput 
+                    type="password" 
+                    placeholder="Confirm Password" 
+                    value={signUpConfirmPassword} 
+                    onChange={(e) => {
+                      setSignUpConfirmPassword(e.target.value);
+                      if (signUpError) setSignUpError("");
+                    }} 
+                  />
+
+                  <div className="pt-2 space-y-2.5">
+                    <button
+                      type="submit"
+                      disabled={isSignUpLoading || signUpSuccess}
+                      className="w-full py-2.5 bg-[#2B8CCD] text-white font-semibold rounded-lg 
+                        hover:bg-[#1e7ba8] transition duration-300 shadow-md hover:shadow-lg uppercase
+                        disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                    >
+                      {isSignUpLoading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          CREATING...
+                        </>
+                      ) : signUpSuccess ? (
+                        'SUCCESS!'
+                      ) : (
+                        'SIGN UP'
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleMicrosoftSignIn}
+                      className="w-full flex items-center justify-center gap-3 px-4 py-2
+                      bg-[#2F2F2F] hover:bg-[#1a1a1a] text-white rounded-lg
+                      transition duration-300 text-xs font-medium shadow-md hover:shadow-lg"
+                    >
+                      <FaMicrosoft className="text-base" />
+                      Sign up with Microsoft
+                    </button>
+
+                    <div className="flex justify-center gap-2 w-full">
+                      {socialProviders.map(({ Icon, label, provider }, index) => (
+                        <SocialButton
+                          key={index}
+                          Icon={Icon}
+                          label={`Sign up with ${label}`}
+                          onClick={() => handleSocialSignIn(provider)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>

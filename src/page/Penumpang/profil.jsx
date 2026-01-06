@@ -1,48 +1,103 @@
-// page/Penumpang/profile.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Cake, Mail, Phone, User, GraduationCap, Home, 
   FileText, BookOpen, Lightbulb, Users, Linkedin, 
   Camera, Pencil, X, Check
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from './navbar';
 import Footer from '../../components/footer';
 import BinusLogo from '../../assets/img/binus-putih.png';
 
 function Profile() {
+  const navigate = useNavigate();
   const [profileImage, setProfileImage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   
-  // User data state - editable fields
+  // User data state - akan diisi dari localStorage
   const [userData, setUserData] = useState({
     personal: {
-      name: 'Ni Putu Saraswati',
-      nim: '2902654051',
-      memberSince: 'December 2024',
-      birthDate: '15 Agustus 2003',
-      gender: 'Perempuan',
-      email: 'ni.saraswati@binus.ac.id',
-      phone: '+62 812 3456 7890',
-      linkedin: 'linkedin.com/in/niputusaraswati'
+      name: '',
+      nim: '',
+      memberSince: '',
+      birthDate: '',
+      gender: '',
+      email: '',
+      phone: '',
+      linkedin: ''
     },
     academic: {
-      binusianId: 'BN318092583',
-      program: 'Computer Science',
-      degreeTitle: 'Bachelor of Computer Science',
-      homeCampus: 'Malang',
-      stream: 'Software Engineering',
-      enrichmentTrack: 'Artificial Intelligence',
-      class: 'LA20'
+      binusianId: '',
+      program: '',
+      degreeTitle: '',
+      homeCampus: '',
+      stream: '',
+      enrichmentTrack: '',
+      class: ''
     }
   });
 
+  // Load data dari localStorage saat component mount
+  useEffect(() => {
+    const userString = localStorage.getItem('user');
+    if (userString) {
+      try {
+        const user = JSON.parse(userString);
+        
+        // Cek apakah user sudah login
+        if (!user.isLoggedIn) {
+          navigate('/'); // Redirect ke login jika belum login
+          return;
+        }
+
+        // ✅ PERBAIKAN: Set data user dari localStorage - GUNAKAN fullName
+        setUserData({
+          personal: {
+            name: user.fullName || '',  // ⭐ GANTI dari user.name ke user.fullName
+            nim: user.profile?.personal?.nim || '-',
+            memberSince: user.profile?.personal?.memberSince || '-',
+            birthDate: user.profile?.personal?.birthDate || '-',
+            gender: user.profile?.personal?.gender || '-',
+            email: user.email || '',
+            phone: user.profile?.personal?.phone || '-',
+            linkedin: user.profile?.personal?.linkedin || '-'
+          },
+          academic: {
+            binusianId: user.profile?.academic?.binusianId || '-',
+            program: user.profile?.academic?.program || '-',
+            degreeTitle: user.profile?.academic?.degreeTitle || '-',
+            homeCampus: user.profile?.academic?.homeCampus || '-',
+            stream: user.profile?.academic?.stream || '-',
+            enrichmentTrack: user.profile?.academic?.enrichmentTrack || '-',
+            class: user.profile?.academic?.class || '-'
+          }
+        });
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        navigate('/'); // Redirect ke login jika error
+      }
+    } else {
+      navigate('/'); // Redirect ke login jika tidak ada data user
+    }
+  }, [navigate]);
+
   // Temporary state for editing
   const [editData, setEditData] = useState({
-    birthDate: userData.personal.birthDate,
-    gender: userData.personal.gender,
-    phone: userData.personal.phone,
-    linkedin: userData.personal.linkedin
+    birthDate: '',
+    gender: '',
+    phone: '',
+    linkedin: ''
   });
+
+  // Update editData ketika userData berubah
+  useEffect(() => {
+    setEditData({
+      birthDate: userData.personal.birthDate,
+      gender: userData.personal.gender,
+      phone: userData.personal.phone,
+      linkedin: userData.personal.linkedin
+    });
+  }, [userData]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -50,6 +105,13 @@ function Profile() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result);
+        // Simpan profile image ke localStorage
+        const userString = localStorage.getItem('user');
+        if (userString) {
+          const user = JSON.parse(userString);
+          user.profileImage = reader.result;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -76,16 +138,31 @@ function Profile() {
   };
 
   const handleSaveEdit = () => {
-    setUserData(prev => ({
-      ...prev,
+    // Update userData
+    const updatedUserData = {
+      ...userData,
       personal: {
-        ...prev.personal,
+        ...userData.personal,
         birthDate: editData.birthDate,
         gender: editData.gender,
         phone: editData.phone,
         linkedin: editData.linkedin
       }
-    }));
+    };
+    
+    setUserData(updatedUserData);
+
+    // Update localStorage
+    const userString = localStorage.getItem('user');
+    if (userString) {
+      const user = JSON.parse(userString);
+      user.profile.personal.birthDate = editData.birthDate;
+      user.profile.personal.gender = editData.gender;
+      user.profile.personal.phone = editData.phone;
+      user.profile.personal.linkedin = editData.linkedin;
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+
     setIsEditing(false);
   };
 
@@ -95,6 +172,17 @@ function Profile() {
       [field]: value
     }));
   };
+
+  // Load profile image dari localStorage
+  useEffect(() => {
+    const userString = localStorage.getItem('user');
+    if (userString) {
+      const user = JSON.parse(userString);
+      if (user.profileImage) {
+        setProfileImage(user.profileImage);
+      }
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -148,7 +236,7 @@ function Profile() {
                 </div>
               </div>
 
-              {/* User Name */}
+              {/* User Name - ✅ Akan menampilkan nama lengkap karena userData.personal.name sudah diisi dengan fullName */}
               <div className="text-center mb-6">
                 <h1 className="text-xl lg:text-2xl font-bold text-white mb-1">
                   {userData.personal.name}
@@ -262,14 +350,18 @@ function Profile() {
                         className="w-full text-sm font-semibold text-gray-900 border border-gray-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
-                      <a 
-                        href={`https://${userData.personal.linkedin}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-base font-semibold text-blue-600 hover:underline truncate block"
-                      >
-                        {userData.personal.linkedin}
-                      </a>
+                      userData.personal.linkedin !== '-' ? (
+                        <a 
+                          href={`https://${userData.personal.linkedin}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-base font-semibold text-blue-600 hover:underline truncate block"
+                        >
+                          {userData.personal.linkedin}
+                        </a>
+                      ) : (
+                        <p className="text-base font-semibold text-gray-900">-</p>
+                      )
                     )}
                   </div>
                 </div>
@@ -287,6 +379,7 @@ function Profile() {
                         onChange={(e) => handleInputChange('gender', e.target.value)}
                         className="w-full text-sm font-semibold text-gray-900 border border-gray-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       >
+                        <option value="-">-</option>
                         <option value="Laki-laki">Laki-laki</option>
                         <option value="Perempuan">Perempuan</option>
                       </select>

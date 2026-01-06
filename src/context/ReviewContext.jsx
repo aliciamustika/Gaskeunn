@@ -88,6 +88,27 @@ export const ReviewProvider = ({ children }) => {
     return reviews;
   };
 
+  // ✅ FIX: Add new review from History page
+  const addReview = (reviewData) => {
+    const newReview = {
+      id: reviews.length > 0 ? Math.max(...reviews.map(r => r.id)) + 1 : 1,
+      name: reviewData.name,
+      rating: reviewData.rating,
+      comment: reviewData.comment || '',
+      date: new Date().toLocaleDateString('en-US', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric' 
+      }),
+      displayOnHome: false, // Default tidak ditampilkan di home, admin yang memilih
+      role: reviewData.role || 'Passenger',
+      avatar: reviewData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewData.name)}&background=3b82f6&color=fff&size=128`
+    };
+
+    setReviews(prev => [newReview, ...prev]); // Add to beginning
+    return newReview;
+  };
+
   // ✅ TAMBAHAN: Reset reviews to initial state (untuk testing/debugging)
   const resetReviews = () => {
     setReviews(initialReviews);
@@ -100,6 +121,7 @@ export const ReviewProvider = ({ children }) => {
     toggleDisplayOnHome,
     getHomeReviews,
     getAllReviews,
+    addReview, // ✅ CRITICAL FIX: Export addReview function!
     resetReviews
   };
 

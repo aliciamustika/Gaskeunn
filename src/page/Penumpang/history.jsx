@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -8,11 +8,13 @@ import Footer from "../../components/footer";
 import GaskeunnLogo from "../../assets/img/Gaskeunn.png";
 import BarcodeImage from "../../assets/img/QRIS.png";
 import { useBooking } from "../../context/BookingContext";
+import { useReviews } from "../../context/ReviewContext";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   Calendar, Clock, CreditCard, X, Check, Package, ChevronLeft, ChevronRight, Monitor, MapPin,
   Phone, MessageCircle, Bus as BusIcon, CheckCircle, Navigation, Star, AlertTriangle, Timer,
-  Wallet, RotateCcw, QrCode, Building2, AlertCircle, XCircle, RefreshCw
+  Wallet, RotateCcw, QrCode, Building2, AlertCircle, XCircle, RefreshCw, ThumbsUp, MessageSquare
 } from "lucide-react";
 
 // Leaflet Icon Fix
@@ -56,15 +58,13 @@ const AnimatedBusMarker = ({ route, progress }) => {
 // Countdown Timer Component
 const CountdownTimer = ({ deadline, onExpire, variant = "payment", bookingId, getRemainingCompletionTime }) => {
   const [timeLeft, setTimeLeft] = useState(0);
-  const [isWaiting, setIsWaiting] = useState(false); // waiting for departure
+  const [isWaiting, setIsWaiting] = useState(false);
   
   useEffect(() => {
     const calculateTimeLeft = () => {
       if (variant === "ongoing" && getRemainingCompletionTime && bookingId) {
-        // Use the context function for ongoing tickets
         const remaining = getRemainingCompletionTime(bookingId);
         if (remaining < 0) {
-          // Negative means waiting for departure
           setIsWaiting(true);
           setTimeLeft(Math.abs(remaining));
         } else {
@@ -73,7 +73,6 @@ const CountdownTimer = ({ deadline, onExpire, variant = "payment", bookingId, ge
           if (remaining === 0 && onExpire) onExpire();
         }
       } else {
-        // Standard countdown for payment
         const now = new Date().getTime();
         const deadlineTime = new Date(deadline).getTime();
         const remaining = Math.max(0, Math.floor((deadlineTime - now) / 1000));
@@ -97,19 +96,17 @@ const CountdownTimer = ({ deadline, onExpire, variant = "payment", bookingId, ge
     return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const isUrgent = !isWaiting && timeLeft < 120; // Less than 2 minutes
+  const isUrgent = !isWaiting && timeLeft < 120;
 
-  // Different styles based on variant and state
   const getStyle = () => {
     if (variant === "ongoing") {
       if (isWaiting) {
-        return 'bg-blue-100 text-blue-600'; // Waiting for departure
+        return 'bg-blue-100 text-blue-600';
       }
       return isUrgent 
         ? 'bg-green-100 text-green-600 animate-pulse' 
         : 'bg-orange-100 text-orange-600';
     }
-    // Default payment variant
     return isUrgent 
       ? 'bg-red-100 text-red-600 animate-pulse' 
       : 'bg-purple-100 text-purple-600';
@@ -118,7 +115,7 @@ const CountdownTimer = ({ deadline, onExpire, variant = "payment", bookingId, ge
   const getIcon = () => {
     if (variant === "ongoing") {
       if (isWaiting) {
-        return <Clock className="w-4 h-4" />; // Waiting icon
+        return <Clock className="w-4 h-4" />;
       }
       return <BusIcon className="w-4 h-4" />;
     }
@@ -140,10 +137,216 @@ const CountdownTimer = ({ deadline, onExpire, variant = "payment", bookingId, ge
   );
 };
 
+// RATING MODAL AS SEPARATE COMPONENT - FIXED VERSION
+const RatingModal = React.memo(({ isOpen, ticket, onClose, onSubmit, existingRating }) => {
+  const [localRating, setLocalRating] = useState(0);
+  const [localReview, setLocalReview] = useState("");
+  const [hoverRating, setHoverRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef(null);
+
+  // Initialize with existing rating when modal opens
+  useEffect(() => {
+    if (isOpen && ticket) {
+      setLocalRating(existingRating?.rating || 0);
+      setLocalReview(existingRating?.review || "");
+      setHoverRating(0);
+      setIsSubmitting(false);
+    }
+  }, [isOpen, ticket, existingRating]);
+
+  const handleSubmit = useCallback(() => {
+    setIsSubmitting(true);
+    // Call onSubmit with rating and review
+    onSubmit(localRating, localReview);
+    // Close will be handled by parent after a brief delay for visual feedback
+    setTimeout(() => {
+      onClose();
+      setIsSubmitting(false);
+    }, 500);
+  }, [localRating, localReview, onSubmit, onClose]);
+
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const handleStarClick = useCallback((star) => {
+    setLocalRating(star);
+  }, []);
+
+  const handleStarHover = useCallback((star) => {
+    setHoverRating(star);
+  }, []);
+
+  const handleStarLeave = useCallback(() => {
+    setHoverRating(0);
+  }, []);
+
+  const handleReviewChange = useCallback((e) => {
+    setLocalReview(e.target.value);
+  }, []);
+
+  if (!isOpen || !ticket) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" 
+      onMouseDown={handleClose}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col" 
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
+          <h3 className="text-xl font-bold text-gray-900">How Was Your Journey?</h3>
+          <button
+            onClick={handleClose}
+            type="button"
+            className="p-2 hover:bg-gray-100 rounded-full transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ThumbsUp className="w-8 h-8 text-green-500" />
+            </div>
+            <p className="text-gray-600 mb-4">Rate your journey experience</p>
+
+            {/* Trip Info */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-500 text-sm">Booking Code</span>
+                <span className="font-bold text-gray-900">{ticket.bookingCode}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-500 text-sm">Route</span>
+                <span className="font-semibold text-gray-900 text-sm">{ticket.departure?.location} → {ticket.arrival?.location}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 text-sm">Date</span>
+                <span className="font-semibold text-gray-900 text-sm">{ticket.departure?.date}</span>
+              </div>
+            </div>
+
+            {/* Star Rating */}
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Rating</p>
+              <div className="flex justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => handleStarClick(star)}
+                    onMouseEnter={() => handleStarHover(star)}
+                    onMouseLeave={handleStarLeave}
+                    className="transition-transform hover:scale-110 active:scale-95 focus:outline-none"
+                  >
+                    <Star
+                      className={`w-10 h-10 ${
+                        star <= (hoverRating || localRating)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              {localRating > 0 && (
+                <p className="text-sm text-gray-600 mt-2">
+                  {localRating === 1 && "Very Poor"}
+                  {localRating === 2 && "Poor"}
+                  {localRating === 3 && "Average"}
+                  {localRating === 4 && "Good"}
+                  {localRating === 5 && "Excellent"}
+                </p>
+              )}
+            </div>
+
+            {/* Review Text Area - FIXED */}
+            <div className="mb-6 text-left">
+              <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Review (Optional)
+              </label>
+              <textarea
+                ref={textareaRef}
+                value={localReview}
+                onChange={handleReviewChange}
+                placeholder="Share your journey experience..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none"
+                rows={4}
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-400 mt-1">{localReview.length}/500 characters</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer - Fixed */}
+        <div className="p-5 border-t border-gray-100 shrink-0">
+          <div className="flex gap-3">
+            <button
+              onClick={handleClose}
+              type="button"
+              className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition"
+            >
+              Maybe Later
+            </button>
+            <button
+              onClick={handleSubmit}
+              type="button"
+              className={`flex-1 py-3 px-4 font-semibold rounded-xl transition ${
+                localRating > 0
+                  ? 'bg-green-500 text-white hover:bg-green-600'
+                  : 'bg-gray-300 text-gray-500'
+              }`}
+            >
+              Submit Rating
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+RatingModal.displayName = 'RatingModal';
+
 function History() {
   const navigate = useNavigate();
   const { getAllTickets, cancelBooking, cancelWithRefund, confirmPayment, getRemainingPaymentTime, getRemainingCompletionTime, hasJourneyStarted } = useBooking();
+  const { addReview } = useReviews();
+  const { currentUser: authUser } = useAuth(); // Rename to authUser
   
+  // FIXED: Get user data with fallback to localStorage
+  const currentUser = useMemo(() => {
+    // Priority 1: Use authUser from context
+    if (authUser && Object.keys(authUser).length > 0) {
+      console.log('✅ Using user from AuthContext:', authUser);
+      return authUser;
+    }
+    
+    // Priority 2: Fallback to localStorage
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        console.log('✅ Using user from localStorage:', parsedUser);
+        return parsedUser;
+      }
+    } catch (error) {
+      console.error('❌ Error parsing user from localStorage:', error);
+    }
+    
+    console.warn('⚠️ No user data found');
+    return null;
+  }, [authUser]);
+
   const [selectedStatus, setSelectedStatus] = useState("All Status");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
@@ -159,8 +362,24 @@ function History() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+
+  // Rating State
+  const [ratings, setRatings] = useState({});
+
+  // Debug: Log user data
+  useEffect(() => {
+    console.log('🔍 Current User Data (Final):', currentUser);
+    if (currentUser) {
+      console.log('👤 Full Name:', currentUser.fullName);
+      console.log('📧 Email:', currentUser.email);
+      console.log('🆔 BINUSIAN ID:', currentUser.profile?.academic?.binusianId);
+      console.log('🎓 NIM:', currentUser.profile?.personal?.nim);
+      console.log('📚 Program:', currentUser.profile?.academic?.program);
+    }
+  }, [currentUser]);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -196,6 +415,53 @@ function History() {
   const handlePaymentClick = (e, ticket) => { e.stopPropagation(); setSelectedTicket(ticket); setSelectedPaymentMethod(""); setShowPaymentModal(true); };
   const confirmPaymentHandler = () => { if (selectedTicket && selectedPaymentMethod) { confirmPayment(selectedTicket.id); setShowPaymentModal(false); setSelectedTicket(null); setSelectedPaymentMethod(""); } };
 
+  // Rating handlers - FIXED WITH CALLBACKS
+  const handleRatingClick = useCallback((e, ticket) => {
+    e.stopPropagation();
+    setSelectedTicket(ticket);
+    setShowRatingModal(true);
+  }, []);
+
+  const handleRatingClose = useCallback(() => {
+    setShowRatingModal(false);
+    setSelectedTicket(null);
+  }, []);
+
+  const handleRatingSubmit = useCallback((rating, review) => {
+    if (selectedTicket && rating > 0) {
+      // Save rating locally for this ticket
+      setRatings(prev => ({
+        ...prev,
+        [selectedTicket.id]: {
+          rating,
+          review,
+          submittedAt: new Date().toISOString()
+        }
+      }));
+
+      // Add review to admin dashboard via ReviewContext
+      const reviewerName = currentUser?.fullName || currentUser?.displayName || 'Anonymous';
+      const reviewerProgram = currentUser?.profile?.academic?.program || 'Passenger';
+      
+      const newReview = addReview({
+         name: reviewerName,
+         rating: rating,
+         comment: review || `Journey from ${selectedTicket.departure?.location} to ${selectedTicket.arrival?.location}`,
+         role: reviewerProgram,
+       });
+
+      // Success feedback
+      console.log('✅ REVIEW SUCCESSFULLY SENT TO ADMIN DASHBOARD!');
+      console.log('📊 Review Details:', newReview);
+      console.log('👤 Reviewer:', reviewerName);
+      console.log('⭐ Rating:', rating + '/5');
+      console.log('💬 Comment:', review || 'No comment');
+    }
+    
+    setShowRatingModal(false);
+    setSelectedTicket(null);
+  }, [selectedTicket, addReview, currentUser]);
+
   const statusFilters = ["All Status", "Pending Payment", "Ongoing", "Completed", "Cancelled", "Refunded", "Expired"];
   
   const getDaysInMonth = (date) => {
@@ -222,7 +488,7 @@ function History() {
   const getStatusStyle = (status) => ({ ongoing: "bg-white text-orange-600 border-orange-500", cancelled: "bg-white text-red-600 border-red-500", completed: "bg-white text-green-600 border-green-500", pending: "bg-white text-purple-600 border-purple-500", refunded: "bg-white text-blue-600 border-blue-500", expired: "bg-white text-gray-600 border-gray-500" }[status] || "bg-white text-gray-600 border-gray-500");
   const getStatusText = (status) => ({ ongoing: "Ongoing", cancelled: "Cancelled", completed: "Completed", pending: "Pending Payment", refunded: "Refunded", expired: "Expired" }[status] || status);
 
-  // Cancel Modal (for unpaid tickets)
+  // Cancel Modal
   const CancelModal = () => {
     if (!showCancelModal || !selectedTicket) return null;
     return (
@@ -247,7 +513,7 @@ function History() {
     );
   };
 
-  // Refund Modal (for paid tickets)
+  // Refund Modal
   const RefundModal = () => {
     if (!showRefundModal || !selectedTicket) return null;
     return (
@@ -281,13 +547,11 @@ function History() {
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowPaymentModal(false)}>
         <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-          {/* Header - Fixed */}
           <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
             <h3 className="text-xl font-bold text-gray-900">Bayar Tiket</h3>
             <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
           </div>
           
-          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto p-5">
             {remainingTime > 0 && (
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
@@ -320,7 +584,7 @@ function History() {
             {selectedPaymentMethod === "qris" && (
               <div className="border-2 border-[oklch(0.6155_0.1314_243.17)] rounded-xl p-4 mb-4">
                 <p className="text-center text-sm font-bold text-gray-900 mb-3">Scan QRIS untuk Pembayaran</p>
-                <div className="flex justify-center"><img src={QrisImage} alt="QRIS" className="w-48 h-48 object-contain" /></div>
+                <div className="flex justify-center"><img src={BarcodeImage} alt="QRIS" className="w-48 h-48 object-contain" /></div>
               </div>
             )}
 
@@ -333,9 +597,8 @@ function History() {
             )}
           </div>
 
-          {/* Footer - Fixed */}
           <div className="p-5 border-t border-gray-100 shrink-0">
-            <button onClick={confirmPaymentHandler} disabled={!selectedPaymentMethod} className={`w-full py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 ${selectedPaymentMethod ? "bg-linear-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}>
+            <button onClick={confirmPaymentHandler} disabled={!selectedPaymentMethod} className={`w-full py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 ${selectedPaymentMethod ? "bg-gradient-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}>
               <Wallet className="w-5 h-5" />Konfirmasi Pembayaran
             </button>
           </div>
@@ -344,7 +607,7 @@ function History() {
     );
   };
 
-  // Tracking Popup
+  // Tracking Popup (keeping this condensed for brevity - same as before)
   const TrackingPopup = () => {
     if (!showTrackingPopup || !selectedTicketForTracking) return null;
     const statusSteps = [
@@ -355,7 +618,7 @@ function History() {
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeTrackingPopup}>
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-linear-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)] p-4 flex items-center justify-between shrink-0">
+          <div className="bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)] p-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto brightness-0 invert" />
               <div><h2 className="text-white font-bold text-lg">Live Tracking</h2><p className="text-white/80 text-sm">Bus {selectedTicketForTracking?.bus} • {selectedTicketForTracking?.bookingCode}</p></div>
@@ -377,7 +640,7 @@ function History() {
                 </div>
                 <div className="bg-gray-100 rounded-xl p-4">
                   <div className="flex justify-between text-sm text-gray-600 mb-2"><span>{selectedTicketForTracking?.departure?.location}</span><span>{selectedTicketForTracking?.arrival?.location}</span></div>
-                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-500 ${trackingStatus === 3 ? "bg-linear-to-r from-green-500 to-green-400" : "bg-linear-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)]"}`} style={{ width: `${busProgress}%` }}></div></div>
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-500 ${trackingStatus === 3 ? "bg-gradient-to-r from-green-500 to-green-400" : "bg-gradient-to-r from-[oklch(0.805_0.1545_76.47)] to-[oklch(0.85_0.15_85)]"}`} style={{ width: `${busProgress}%` }}></div></div>
                   <p className="text-center text-sm text-gray-500 mt-2">{trackingStatus === 3 ? <span className="font-semibold text-green-600">🎉 Kamu sudah sampai!</span> : <>Estimasi: <span className="font-semibold">{Math.max(1, Math.round((100 - busProgress) / 10))} menit</span></>}</p>
                 </div>
               </div>
@@ -403,7 +666,7 @@ function History() {
                     })}
                   </div>
                 </div>
-                <div className="bg-linear-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border border-gray-200 text-left">
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border border-gray-200 text-left">
                   <h3 className="font-bold text-gray-900 text-lg mb-4">Informasi Driver</h3>
                   <div className="flex items-start gap-4">
                     <div className="relative"><img src={driverData.photo} alt={driverData.name} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg" /><div className="absolute -bottom-1 -right-1 bg-green-500 w-5 h-5 rounded-full border-2 border-white"></div></div>
@@ -433,17 +696,24 @@ function History() {
       <CancelModal />
       <RefundModal />
       <PaymentModal />
+      <RatingModal 
+        isOpen={showRatingModal}
+        ticket={selectedTicket}
+        onClose={handleRatingClose}
+        onSubmit={handleRatingSubmit}
+        existingRating={selectedTicket ? ratings[selectedTicket.id] : null}
+      />
 
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="bg-linear-to-r from-orange-500 to-amber-500 py-16">
-          <div className="max-w-350 mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-r from-orange-500 to-amber-500 py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-black text-white text-left">Your Journey Records, All in One Place.</h1>
-            <p className="text-white/80 mt-2 text-lg text-left">Total {allTickets.length} perjalanan tercatat</p>
+            <p className="text-white/80 mt-2 text-lg text-left">Total {allTickets.length} journeys recorded</p>
           </div>
         </div>
 
-        <div className="max-w-350 mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid md:grid-cols-2 gap-8 mb-8 text-left">
             <div>
               <h3 className="text-sm font-bold text-gray-700 mb-3">Select Status</h3>
@@ -477,75 +747,265 @@ function History() {
 
           <div className="space-y-6">
             {filteredJourneys.map((journey) => (
-              <div key={journey.id} className="flex gap-4">
-                <div className={`flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow ${journey.status === "ongoing" ? "cursor-pointer" : ""}`} onClick={() => handleTicketClick(journey)}>
-                  <div className="flex">
-                    <div className="flex-1 p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto" />
-                        {journey.status === "pending" && journey.paymentDeadline && (
-                          <CountdownTimer deadline={journey.paymentDeadline} />
-                        )}
-                        {journey.status === "ongoing" && journey.completionDeadline && (
-                          <CountdownTimer 
-                            deadline={journey.completionDeadline} 
-                            variant="ongoing" 
-                            bookingId={journey.id}
-                            getRemainingCompletionTime={getRemainingCompletionTime}
-                          />
-                        )}
+              <div key={journey.id}>
+                {/* DESKTOP VIEW */}
+                <div className="hidden md:flex gap-4">
+                  <div className={`flex-1 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow ${journey.status === "ongoing" ? "cursor-pointer" : ""}`} onClick={() => handleTicketClick(journey)}>
+                    <div className="flex">
+                      <div className="flex-1 p-5">
+                        <div className="flex items-center justify-between mb-4">
+                          <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto" />
+                          {journey.status === "pending" && journey.paymentDeadline && (
+                            <CountdownTimer deadline={journey.paymentDeadline} />
+                          )}
+                          {journey.status === "ongoing" && journey.completionDeadline && (
+                            <CountdownTimer 
+                              deadline={journey.completionDeadline} 
+                              variant="ongoing" 
+                              bookingId={journey.id}
+                              getRemainingCompletionTime={getRemainingCompletionTime}
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-left"><div className="text-gray-400 text-xs mb-1">Departure</div><div className="text-2xl font-bold text-gray-900">{journey.departure?.time}</div><div className="text-sm text-gray-600">{journey.departure?.date}</div><div className="text-sm text-gray-500">{journey.departure?.location}</div></div>
+                          <div className="flex flex-col items-center px-4"><div className="flex items-center gap-1"><div className="w-2 h-2 bg-orange-400 rounded-full"></div><div className="w-16 h-0.5 border-t-2 border-dashed border-gray-300"></div><div className="w-2 h-2 bg-orange-400 rounded-full"></div></div><div className="bg-orange-100 text-orange-600 text-xs font-medium px-2 py-0.5 rounded-full mt-1">{journey.duration}</div><div className="text-gray-400 text-xs mt-0.5">{journey.stops}</div></div>
+                          <div className="text-left"><div className="text-gray-400 text-xs mb-1">Destination</div><div className="text-2xl font-bold text-gray-900">{journey.arrival?.time}</div><div className="text-sm text-gray-600">{journey.arrival?.date}</div><div className="text-sm text-gray-500">{journey.arrival?.location}</div></div>
+                        </div>
+                        <div className="flex items-center gap-4 mt-5 pt-4 border-t border-gray-100">
+                          <div className="flex items-start gap-2 text-gray-500 flex-1"><Monitor size={16} className="mt-0.5 shrink-0" /><span className="text-xs leading-tight">Show e-tickets during check-in.</span></div>
+                          <div className="w-px h-8 bg-gray-200"></div>
+                          <div className="flex items-start gap-2 text-gray-500 flex-1"><Clock size={16} className="mt-0.5 shrink-0" /><span className="text-xs leading-tight">Be at boarding gate 30 min before.</span></div>
+                        </div>
+                        {journey.status === "ongoing" && (<div className="mt-4 flex items-center justify-center gap-2 text-orange-500 animate-pulse"><MapPin size={16} /><span className="text-sm font-medium">Click for Live Tracking</span></div>)}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-left"><div className="text-gray-400 text-xs mb-1">Departure</div><div className="text-2xl font-bold text-gray-900">{journey.departure?.time}</div><div className="text-sm text-gray-600">{journey.departure?.date}</div><div className="text-sm text-gray-500">{journey.departure?.location}</div></div>
-                        <div className="flex flex-col items-center px-4"><div className="flex items-center gap-1"><div className="w-2 h-2 bg-orange-400 rounded-full"></div><div className="w-16 h-0.5 border-t-2 border-dashed border-gray-300"></div><div className="w-2 h-2 bg-orange-400 rounded-full"></div></div><div className="bg-orange-100 text-orange-600 text-xs font-medium px-2 py-0.5 rounded-full mt-1">{journey.duration}</div><div className="text-gray-400 text-xs mt-0.5">{journey.stops}</div></div>
-                        <div className="text-left"><div className="text-gray-400 text-xs mb-1">Destination</div><div className="text-2xl font-bold text-gray-900">{journey.arrival?.time}</div><div className="text-sm text-gray-600">{journey.arrival?.date}</div><div className="text-sm text-gray-500">{journey.arrival?.location}</div></div>
+                      <div className="relative"><div className="absolute top-4 bottom-4 w-px border-l-2 border-dashed border-yellow-400"></div><div className="absolute -top-3 -left-3 w-6 h-6 bg-gray-50 rounded-full"></div><div className="absolute -bottom-3 -left-3 w-6 h-6 bg-gray-50 rounded-full"></div></div>
+                      <div className="w-96 p-5 bg-white">
+                        <div className="flex justify-end mb-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(journey.status)}`}>{getStatusText(journey.status)}</span></div>
+                        <div className="space-y-4 mb-4">
+                          <div className="grid grid-cols-2 gap-x-8">
+                            <div className="text-left">
+                              <div className="text-gray-400 text-xs mb-1">Name</div>
+                              <div className="text-gray-900 font-semibold text-sm truncate">
+                                {currentUser?.fullName || currentUser?.displayName || 'Guest'}
+                              </div>
+                            </div>
+                            <div className="text-left">
+                              <div className="text-gray-400 text-xs mb-1">Email</div>
+                              <div className="text-gray-900 font-semibold text-sm truncate">
+                                {currentUser?.email || '-'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-8">
+                            <div className="text-left">
+                              <div className="text-gray-400 text-xs mb-1">BINUSIAN ID</div>
+                              <div className="text-gray-900 font-semibold text-sm">
+                                {currentUser?.profile?.academic?.binusianId || '-'}
+                              </div>
+                            </div>
+                            <div className="text-left">
+                              <div className="text-gray-400 text-xs mb-1">NIM</div>
+                              <div className="text-gray-900 font-semibold text-sm">
+                                {currentUser?.profile?.personal?.nim || '-'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center gap-8 pt-3 border-t border-gray-100"><div className="text-center bg-gray-50 rounded-lg px-8 py-2"><div className="text-gray-400 text-xs mb-1">Bus</div><div className="text-gray-900 font-bold text-2xl">{journey.bus}</div></div><div className="text-center bg-gray-50 rounded-lg px-8 py-2"><div className="text-gray-400 text-xs mb-1">Seat</div><div className="text-gray-900 font-bold text-2xl">{journey.seat}</div></div></div>
                       </div>
-                      <div className="flex items-center gap-4 mt-5 pt-4 border-t border-gray-100">
-                        <div className="flex items-start gap-2 text-gray-500 flex-1"><Monitor size={16} className="mt-0.5 shrink-0" /><span className="text-xs leading-tight">Show e-tickets during check-in.</span></div>
-                        <div className="w-px h-8 bg-gray-200"></div>
-                        <div className="flex items-start gap-2 text-gray-500 flex-1"><Clock size={16} className="mt-0.5 shrink-0" /><span className="text-xs leading-tight">Be at boarding gate 30 min before.</span></div>
-                      </div>
-                      {journey.status === "ongoing" && (<div className="mt-4 flex items-center justify-center gap-2 text-orange-500 animate-pulse"><MapPin size={16} /><span className="text-sm font-medium">Klik untuk Live Tracking</span></div>)}
                     </div>
-                    <div className="relative"><div className="absolute top-4 bottom-4 w-px border-l-2 border-dashed border-yellow-400"></div><div className="absolute -top-3 -left-3 w-6 h-6 bg-gray-50 rounded-full"></div><div className="absolute -bottom-3 -left-3 w-6 h-6 bg-gray-50 rounded-full"></div></div>
-                    <div className="w-96 p-5 bg-white">
-                      <div className="flex justify-end mb-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(journey.status)}`}>{getStatusText(journey.status)}</span></div>
-                      <div className="space-y-4 mb-4">
-                        <div className="grid grid-cols-2 gap-x-8"><div className="text-left"><div className="text-gray-400 text-xs mb-1">Name</div><div className="text-gray-900 font-semibold text-sm truncate">{journey.passenger?.name}</div></div><div className="text-left"><div className="text-gray-400 text-xs mb-1">Email</div><div className="text-gray-900 font-semibold text-sm truncate">{journey.passenger?.email}</div></div></div>
-                        <div className="grid grid-cols-2 gap-x-8"><div className="text-left"><div className="text-gray-400 text-xs mb-1">BINUSIAN ID</div><div className="text-gray-900 font-semibold text-sm">{journey.passenger?.binusianId}</div></div><div className="text-left"><div className="text-gray-400 text-xs mb-1">NIM</div><div className="text-gray-900 font-semibold text-sm">{journey.passenger?.nim}</div></div></div>
-                      </div>
-                      <div className="flex items-center justify-center gap-8 pt-3 border-t border-gray-100"><div className="text-center bg-gray-50 rounded-lg px-8 py-2"><div className="text-gray-400 text-xs mb-1">Bus</div><div className="text-gray-900 font-bold text-2xl">{journey.bus}</div></div><div className="text-center bg-gray-50 rounded-lg px-8 py-2"><div className="text-gray-400 text-xs mb-1">Seat</div><div className="text-gray-900 font-bold text-2xl">{journey.seat}</div></div></div>
-                    </div>
+                  </div>
+
+                  <div className="w-44 bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center justify-center border border-gray-100">
+                    {journey.status === "ongoing" && journey.bookingCode ? (
+                      <>
+                        <h3 className="text-sm font-bold text-gray-900 mb-2">BARCODE</h3>
+                        <img src={BarcodeImage} alt="Barcode" className="w-24 h-24 object-contain mb-2" />
+                        <div className="text-center mb-2"><div className="text-gray-400 text-xs mb-0.5">Booking code</div><div className="text-gray-900 font-bold text-xs">{journey.bookingCode}</div></div>
+                        <button onClick={(e) => handleRefundClick(e, journey)} className="text-blue-500 text-xs hover:text-blue-600 hover:underline font-medium flex items-center gap-1"><RotateCcw className="w-3 h-3" />Cancel & Refund</button>
+                      </>
+                    ) : journey.status === "cancelled" ? (
+                      <><div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-3"><X className="w-8 h-8 text-red-500" /></div><div className="text-xs text-gray-500 text-center">Booking<br />Cancelled</div></>
+                    ) : journey.status === "completed" ? (
+                      <>
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-3"><Check className="w-8 h-8 text-green-500" /></div>
+                        <div className="text-xs text-gray-500 text-center mb-3">Journey<br />Completed</div>
+                        {ratings[journey.id] ? (
+                          <div className="text-center">
+                            <div className="flex justify-center gap-0.5 mb-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star key={star} className={`w-3 h-3 ${star <= ratings[journey.id].rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                              ))}
+                            </div>
+                            <p className="text-xs text-green-600 font-medium">Rating Submitted</p>
+                          </div>
+                        ) : (
+                          <button onClick={(e) => handleRatingClick(e, journey)} className="text-green-500 text-xs hover:text-green-600 hover:underline font-medium flex items-center gap-1">
+                            <Star className="w-3 h-3" />Rate Journey
+                          </button>
+                        )}
+                      </>
+                    ) : journey.status === "refunded" ? (
+                      <><div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-3"><RotateCcw className="w-8 h-8 text-blue-500" /></div><div className="text-xs text-gray-500 text-center mb-1">Refunded</div><div className="text-xs text-blue-600 font-semibold">Rp {journey.totalPrice?.toLocaleString('id-ID')}</div></>
+                    ) : journey.status === "expired" ? (
+                      <><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3"><XCircle className="w-8 h-8 text-gray-500" /></div><div className="text-xs text-gray-500 text-center">Payment<br />Expired</div></>
+                    ) : journey.status === "pending" ? (
+                      <>
+                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-3"><CreditCard className="w-8 h-8 text-purple-500" /></div>
+                        <div className="text-xs text-gray-500 text-center mb-1">Awaiting<br />Payment</div>
+                        <div className="text-sm font-bold text-purple-600 mb-2">Rp {journey.totalPrice?.toLocaleString('id-ID')}</div>
+                        <button onClick={(e) => handlePaymentClick(e, journey)} className="w-full px-3 py-2 bg-purple-500 text-white text-xs font-semibold rounded-lg hover:bg-purple-600 transition flex items-center justify-center gap-1 mb-2"><Wallet className="w-3 h-3" />Pay Now</button>
+                        <button onClick={(e) => handleCancelClick(e, journey)} className="text-red-500 text-xs hover:text-red-600 hover:underline font-medium">Cancel</button>
+                      </>
+                    ) : (
+                      <><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3"><Package className="w-8 h-8 text-gray-400" /></div><div className="text-xs text-gray-500 text-center">No barcode</div></>
+                    )}
                   </div>
                 </div>
 
-                <div className="w-44 bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center justify-center border border-gray-100">
-                  {journey.status === "ongoing" && journey.bookingCode ? (
-                    <>
-                      <h3 className="text-sm font-bold text-gray-900 mb-2">BARCODE</h3>
-                      <img src={BarcodeImage} alt="Barcode" className="w-24 h-24 object-contain mb-2" />
-                      <div className="text-center mb-2"><div className="text-gray-400 text-xs mb-0.5">Booking code</div><div className="text-gray-900 font-bold text-xs">{journey.bookingCode}</div></div>
-                      <button onClick={(e) => handleRefundClick(e, journey)} className="text-blue-500 text-xs hover:text-blue-600 hover:underline font-medium flex items-center gap-1"><RotateCcw className="w-3 h-3" />Cancel & Refund</button>
-                    </>
-                  ) : journey.status === "cancelled" ? (
-                    <><div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-3"><X className="w-8 h-8 text-red-500" /></div><div className="text-xs text-gray-500 text-center">Booking<br />Cancelled</div></>
-                  ) : journey.status === "completed" ? (
-                    <><div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-3"><Check className="w-8 h-8 text-green-500" /></div><div className="text-xs text-gray-500 text-center">Journey<br />Completed</div></>
-                  ) : journey.status === "refunded" ? (
-                    <><div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-3"><RotateCcw className="w-8 h-8 text-blue-500" /></div><div className="text-xs text-gray-500 text-center mb-1">Refunded</div><div className="text-xs text-blue-600 font-semibold">Rp {journey.totalPrice?.toLocaleString('id-ID')}</div></>
-                  ) : journey.status === "expired" ? (
-                    <><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3"><XCircle className="w-8 h-8 text-gray-500" /></div><div className="text-xs text-gray-500 text-center">Payment<br />Expired</div></>
-                  ) : journey.status === "pending" ? (
-                    <>
-                      <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-3"><CreditCard className="w-8 h-8 text-purple-500" /></div>
-                      <div className="text-xs text-gray-500 text-center mb-1">Awaiting<br />Payment</div>
-                      <div className="text-sm font-bold text-purple-600 mb-2">Rp {journey.totalPrice?.toLocaleString('id-ID')}</div>
-                      <button onClick={(e) => handlePaymentClick(e, journey)} className="w-full px-3 py-2 bg-purple-500 text-white text-xs font-semibold rounded-lg hover:bg-purple-600 transition flex items-center justify-center gap-1 mb-2"><Wallet className="w-3 h-3" />Bayar Sekarang</button>
-                      <button onClick={(e) => handleCancelClick(e, journey)} className="text-red-500 text-xs hover:text-red-600 hover:underline font-medium">Batalkan</button>
-                    </>
-                  ) : (
-                    <><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3"><Package className="w-8 h-8 text-gray-400" /></div><div className="text-xs text-gray-500 text-center">No barcode</div></>
-                  )}
+                {/* MOBILE VIEW - Keeping condensed for space */}
+                <div className="md:hidden flex justify-center px-4">
+                  <div 
+                    className={`relative bg-white rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 ${journey.status === "ongoing" ? "cursor-pointer" : ""}`}
+                    onClick={() => journey.status === "ongoing" && handleTicketClick(journey)}
+                  >
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <img src={GaskeunnLogo} alt="Gaskeunn" className="h-8 w-auto" />
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border-2 ${getStatusStyle(journey.status)}`}>
+                          {getStatusText(journey.status)}
+                        </span>
+                      </div>
+
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 text-left">
+                            <p className="text-gray-500 text-xs mb-1">Departure</p>
+                            <p className="text-gray-900 text-2xl font-bold">{journey.departure?.time}</p>
+                            <p className="text-gray-500 text-sm mt-1">{journey.departure?.location}</p>
+                          </div>
+
+                          <div className="flex flex-col items-center px-3">
+                            <div className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <div className="w-12 h-0.5 border-t-2 border-dashed border-orange-400"></div>
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            </div>
+                            <div className="bg-orange-100 text-orange-600 text-xs font-medium px-2 py-0.5 rounded-full mt-1">
+                              {journey.duration}
+                            </div>
+                            <p className="text-gray-400 text-xs mt-0.5">{journey.stops}</p>
+                          </div>
+
+                          <div className="flex-1 text-right">
+                            <p className="text-gray-500 text-xs mb-1">Destination</p>
+                            <p className="text-gray-900 text-2xl font-bold">{journey.arrival?.time}</p>
+                            <p className="text-gray-500 text-sm mt-1">{journey.arrival?.location}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="relative mb-6">
+                        <div className="border-t-2 border-dashed border-yellow-400"></div>
+                      </div>
+
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <p className="text-gray-600 text-sm font-medium">{journey.departure?.date}</p>
+                        </div>
+
+                        <div className="flex items-center gap-6">
+                          <div className="text-center">
+                            <p className="text-gray-500 text-xs mb-1">Bus</p>
+                            <p className="text-gray-900 font-bold text-3xl">{journey.bus}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-gray-500 text-xs mb-1">Seat</p>
+                            <p className="text-gray-900 font-bold text-3xl">{journey.seat}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {journey.status === "ongoing" && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTicketClick(journey);
+                          }}
+                          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all mb-3 flex items-center justify-center gap-2"
+                        >
+                          <MapPin size={20} />
+                          Click for Live Tracking
+                        </button>
+                      )}
+                      
+                      {journey.status === "pending" && (
+                        <>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePaymentClick(e, journey);
+                            }}
+                            className="w-full bg-purple-500 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all mb-3 flex items-center justify-center gap-2"
+                          >
+                            <Wallet size={20} />
+                            Pay Now
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelClick(e, journey);
+                            }}
+                            className="w-full bg-white text-red-600 font-semibold py-3 rounded-xl border-2 border-red-200 hover:bg-red-50 transition-all"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+
+                      {journey.status === "ongoing" && journey.bookingCode && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRefundClick(e, journey);
+                          }}
+                          className="w-full bg-white text-blue-600 font-semibold py-3 rounded-xl border-2 border-blue-200 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                        >
+                          <RotateCcw size={16} />
+                          Cancel & Refund
+                        </button>
+                      )}
+
+                      {journey.status === "completed" && (
+                        <>
+                          {ratings[journey.id] ? (
+                            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-green-700 font-semibold text-sm">Your Rating</span>
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star key={star} className={`w-4 h-4 ${star <= ratings[journey.id].rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                  ))}
+                                </div>
+                              </div>
+                              {ratings[journey.id].review && (
+                                <p className="text-gray-600 text-xs mt-2 italic">"{ratings[journey.id].review}"</p>
+                              )}
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={(e) => handleRatingClick(e, journey)}
+                              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                            >
+                              <Star size={20} />
+                              Rate Journey
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -554,9 +1014,9 @@ function History() {
           {filteredJourneys.length === 0 && (
             <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
               <Package className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Belum ada perjalanan</h3>
-              <p className="text-gray-500 mb-6">{selectedStatus === "All Status" ? "Kamu belum memiliki riwayat perjalanan." : `Tidak ada perjalanan dengan status "${selectedStatus}".`}</p>
-              <button onClick={() => navigate('/booking')} className="px-8 py-3 bg-linear-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg">Book Ticket Sekarang</button>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">No Journeys Yet</h3>
+              <p className="text-gray-500 mb-6">{selectedStatus === "All Status" ? "You don't have any journey history yet." : `No journeys with status "${selectedStatus}".`}</p>
+              <button onClick={() => navigate('/booking')} className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-lg">Book Ticket Now</button>
             </div>
           )}
         </div>

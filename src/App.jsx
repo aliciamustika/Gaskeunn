@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { BookingProvider } from "./context/BookingContext";
 import { ReviewProvider } from "./context/ReviewContext";
+import { AuthProvider } from './context/AuthContext';
 
 import "leaflet/dist/leaflet.css";
 import ScrollToTop from "./components/scrolltotop";
@@ -10,7 +11,6 @@ import "./App.css";
 import Welcome from "./components/welcome";
 import Authentication from "./components/authentication";
 import Footer from "./components/footer";
-import Register from "./components/register";
 import { NotificationProvider } from "./page/Penumpang/notificationContext";
 
 // Penumpang
@@ -42,25 +42,27 @@ import ScheduleS from "./page/Sopir/schedule";
 import RouteS from "./page/Sopir/route";
 import RouteScheduleS from "./page/Sopir/routeschedule";
 import ContactUsS from "./page/Sopir/contactus";
+import LoginSopir from "./components/LoginSopir";
 
 // Admin
+import LoginAdmin from "./page/Admin/LoginAdmin";
 import AdminPage from "./page/Admin/adminpage";
-import AdminDashboardDebug from "./page/Admin/AdminDashboard_Debug";
 
 function App() {
   return (
     <NotificationProvider>
+      <AuthProvider>
       <ReviewProvider>
         <BookingProvider>
           <ScrollToTop />
           <Routes>
-            {/* COMPONENTS */}
+            {/* ===== WELCOME & AUTH ===== */}
             <Route path="/" element={<Welcome />} />
+            
+            {/* Login untuk PENUMPANG */}
             <Route path="/auth" element={<Authentication />} />
-            <Route path="/footer" element={<Footer />} />
-            <Route path="/register" element={<Register />} />
 
-            {/* PAGE | PENUMPANG */}
+            {/* ===== PAGE | PENUMPANG ===== */}
             <Route path="/home" element={<Home />} />
             <Route path="/navbar" element={<Navbar />} />
             <Route path="/booking" element={<Booking />} />
@@ -75,7 +77,7 @@ function App() {
             <Route path="/notification" element={<Notification />} />
             <Route path="/detail-ticket/:id" element={<DetailTicket />} />
 
-            {/* PAGE | SOPIR */}
+            {/* ===== PAGE | SOPIR ===== */}
             <Route path="/homesopir" element={<HomeS />} />
             <Route path="/newssopir" element={<NewsS />} />
             <Route path="/navbarsopir" element={<NavbarS />} />
@@ -87,14 +89,21 @@ function App() {
             <Route path="/routesopir" element={<RouteS />} />
             <Route path="/routeschedulesopir" element={<RouteScheduleS />} />
             <Route path="/contactussopir" element={<ContactUsS />} />
+            <Route path="/loginSopir" element={<LoginSopir />} />
 
-            {/* PAGE | ADMIN */}
-            <Route path="/adminpage" element={<AdminPage />} />
-            <Route path="/adminpagehuhu" element={<AdminDashboardDebug />} />
+            {/* ===== PAGE | ADMIN ===== */}
+            {/* Login Admin (terpisah dari user) */}
+            <Route path="/admin/login" element={<LoginAdmin />} />
+            {/* Dashboard Admin setelah login */}
+            <Route path="/admin" element={<AdminPage />} />
+
+            {/* ===== OTHERS ===== */}
+            <Route path="/footer" element={<Footer />} />
             <Route path="/bookingcontext" element={<BookingContext />} />
           </Routes>
         </BookingProvider>
       </ReviewProvider>
+      </AuthProvider>
     </NotificationProvider>
   );
 }

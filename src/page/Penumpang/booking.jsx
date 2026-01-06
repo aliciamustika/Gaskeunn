@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./navbar";
 import Footer from "../../components/footer";
@@ -25,10 +25,11 @@ import {
 function Booking() {
   const navigate = useNavigate();
   const { createBooking } = useBooking();
+  const hasBookedRef = useRef(false);
 
   const [bookingData, setBookingData] = useState({
-    departure: "Perempatan Tirtomoyo Security",
-    destination: "BINUS University",
+    departure: "",
+    destination: "",
     departureDate: formatDateToString(new Date()),
     departureTime: "6:00",
   });
@@ -40,16 +41,13 @@ function Booking() {
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [promoError, setPromoError] = useState("");
-  
-  // Payment timing option
   const [payNow, setPayNow] = useState(true);
-  
-  // Booking state
+  const [qrisTimeRemaining, setQrisTimeRemaining] = useState(300);
+  const [qrisTimerActive, setQrisTimerActive] = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [newBooking, setNewBooking] = useState(null);
-  
-  // Dropdown visibility states
   const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
   const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
@@ -62,6 +60,39 @@ function Booking() {
       year: 'numeric'
     });
   }
+
+  const formatTimeRemaining = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    let interval;
+    if (qrisTimerActive && qrisTimeRemaining > 0) {
+      interval = setInterval(() => {
+        setQrisTimeRemaining((prev) => {
+          if (prev <= 1) {
+            setQrisTimerActive(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [qrisTimerActive, qrisTimeRemaining]);
+
+  useEffect(() => {
+    if (selectedQrisOption === "qris" && payNow) {
+      setQrisTimerActive(true);
+      setQrisTimeRemaining(300);
+      setPaymentConfirmed(false);
+    } else {
+      setQrisTimerActive(false);
+      setPaymentConfirmed(false);
+    }
+  }, [selectedQrisOption, payNow]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -172,12 +203,30 @@ function Booking() {
     setPromoError("");
   };
 
+  const isBookingDisabled = () => {
+    if (isBooking) return true;
+    if (payNow && !selectedQrisOption) return true;
+    if (payNow && selectedQrisOption === "qris") {
+      return qrisTimeRemaining > 0 && !paymentConfirmed;
+    }
+    return false;
+  };
+
   const handleBookTicket = () => {
+    if (hasBookedRef.current) return;
+    
     if (payNow && !selectedQrisOption) {
       alert("Silakan pilih metode pembayaran terlebih dahulu");
       return;
     }
+    if (payNow && selectedQrisOption === "qris" && qrisTimeRemaining > 0 && !paymentConfirmed) {
+      alert("Silakan konfirmasi pembayaran atau tunggu hingga waktu scan selesai");
+      return;
+    }
+    
+    hasBookedRef.current = true;
     setIsBooking(true);
+    
     setTimeout(() => {
       const booking = createBooking({
         ...bookingData,
@@ -186,20 +235,25 @@ function Booking() {
         promoCode: appliedPromo?.code || null,
         payNow: payNow,
       });
+      
       setNewBooking(booking);
       setIsBooking(false);
       setBookingSuccess(true);
-      setTimeout(() => { navigate('/home'); }, 3000);
+      
+      setTimeout(() => {
+        navigate('/home');
+      }, 3000);
     }, 1500);
   };
 
   const SuccessModal = () => {
     if (!bookingSuccess || !newBooking) return null;
+    
     const isPending = newBooking.status === 'pending';
+    
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col animate-bounce-in">
-          {/* Header - Fixed */}
           <div className="p-6 pb-4 text-center shrink-0">
             <div className={`w-16 h-16 ${isPending ? 'bg-purple-100' : 'bg-green-100'} rounded-full flex items-center justify-center mx-auto mb-4`}>
               {isPending ? <Timer className="w-10 h-10 text-purple-500" /> : <CheckCircle className="w-10 h-10 text-green-500" />}
@@ -208,7 +262,6 @@ function Booking() {
             <p className="text-gray-600 text-sm">{isPending ? 'Tiket kamu sudah dipesan. Segera lakukan pembayaran.' : 'Tiket kamu sudah berhasil dipesan dan dibayar'}</p>
           </div>
           
-          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto px-6">
             {isPending && (
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 mb-4">
@@ -232,7 +285,6 @@ function Booking() {
             </div>
           </div>
           
-          {/* Footer - Fixed */}
           <div className="p-6 pt-4 shrink-0">
             <p className="text-xs text-gray-500 mb-3 text-center">Mengalihkan ke halaman utama dalam 3 detik...</p>
             <button onClick={() => navigate('/home')} className="w-full bg-[oklch(0.6155_0.1314_243.17)] text-white font-semibold py-3 rounded-xl hover:bg-[oklch(0.55_0.14_243.17)] transition">{isPending ? 'Lihat & Bayar Tiket' : 'Lihat Tiket Saya'}</button>
@@ -248,17 +300,28 @@ function Booking() {
       <div className="min-h-screen bg-linear-to-br from-slate-50 via-orange-50 to-amber-50">
         <Navbar />
         <div className="min-h-screen bg-linear-to-b from-[oklch(0.6155_0.1314_243.17)] to-[oklch(0.7_0.12_243.17)]">
-          <div className="py-12 px-8"><div className="max-w-7xl mx-auto"><h1 className="text-4xl md:text-5xl font-bold text-white text-left mb-2">Gaskeunn Book Your Journey Ticket</h1></div></div>
+          <div className="py-12 px-8">
+            <div className="max-w-7xl mx-auto">
+              <h1 className="text-4xl md:text-5xl font-bold text-white text-left mb-2">Gaskeunn Book Your Journey Ticket</h1>
+            </div>
+          </div>
+          
           <div className="pb-16 px-8">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-start">
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                  <div className="border border-gray-300 rounded-xl p-4 mb-6">
+                <div className="bg-white rounded-2xl shadow-xl p-4 md:p-8">
+                  {/* Desktop View - Original Layout */}
+                  <div className="hidden md:block border border-gray-300 rounded-xl p-4 mb-6">
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-center">
                       <div className="relative">
                         <div onClick={() => { closeAllDropdowns(); setShowDepartureDropdown(!showDepartureDropdown); }} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                           <div className="w-12 h-12 flex items-center justify-center"><MapPin className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" /></div>
-                          <div className="flex-1"><p className="text-sm text-left text-gray-500 mb-1">Departure</p><p className="text-lg text-left font-bold text-gray-900">{bookingData.departure}</p></div>
+                          <div className="flex-1">
+                            <p className="text-sm text-left text-gray-600 font-medium mb-1">Departure</p>
+                            <p className={`text-lg text-left font-normal truncate ${bookingData.departure ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+                              {bookingData.departure || "Select departure point"}
+                            </p>
+                          </div>
                           <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showDepartureDropdown ? 'rotate-180' : ''}`} />
                         </div>
                         {showDepartureDropdown && (
@@ -275,7 +338,12 @@ function Booking() {
                       <div className="relative">
                         <div onClick={() => { closeAllDropdowns(); setShowDestinationDropdown(!showDestinationDropdown); }} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
                           <div className="w-12 h-12 flex items-center justify-center"><MapPinCheck className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" /></div>
-                          <div className="flex-1"><p className="text-sm text-left text-gray-500 mb-1">Destination</p><p className="text-lg text-left font-bold text-gray-900">{bookingData.destination}</p></div>
+                          <div className="flex-1">
+                            <p className="text-sm text-left text-gray-600 font-medium mb-1">Destination</p>
+                            <p className={`text-lg text-left font-normal truncate ${bookingData.destination ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+                              {bookingData.destination || "Select destination point"}
+                            </p>
+                          </div>
                           <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showDestinationDropdown ? 'rotate-180' : ''}`} />
                         </div>
                         {showDestinationDropdown && (
@@ -290,22 +358,148 @@ function Booking() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Mobile View - New Layout matching the image */}
+                  <div className="block md:hidden border-2 border-gray-200 rounded-2xl p-5 mb-6">
+                    {/* Departure Section */}
+                    <div className="relative mb-0">
+                      <div onClick={() => { closeAllDropdowns(); setShowDepartureDropdown(!showDepartureDropdown); }} className="cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1">
+                            <MapPin className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" />
+                          </div>
+                          <div className="flex-1 text-left min-w-0">
+                            <p className="text-sm text-gray-600 font-medium mb-1">Departure</p>
+                            <p className={`text-base font-normal truncate ${bookingData.departure ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+                              {bookingData.departure || 'Select departure point'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      {showDepartureDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-64 overflow-y-auto">
+                          {getAvailableDepartureLocations().map((location, index) => (
+                            <button key={index} onClick={() => handleDepartureSelect(location)} className={`w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${bookingData.departure === location ? "bg-blue-50 text-[oklch(0.6155_0.1314_243.17)] font-semibold" : ""}`}>
+                              <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /><span className="text-sm">{location}</span></div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Divider Line with Swap Button */}
+                    <div className="flex items-center my-4">
+                      <div className="flex-1 border-t border-gray-300"></div>
+                      <button 
+                        onClick={() => { handleSwapLocations(); closeAllDropdowns(); }} 
+                        className="mx-3 w-10 h-10 flex items-center justify-center bg-white border-2 border-gray-300 rounded-full hover:bg-blue-50 hover:border-[oklch(0.6155_0.1314_243.17)] transition-all"
+                      >
+                        <ArrowLeftRight className="w-5 h-5 text-[oklch(0.6155_0.1314_243.17)]" />
+                      </button>
+                      <div className="flex-1 border-t border-gray-300"></div>
+                    </div>
+
+                    {/* Destination Section */}
+                    <div className="relative">
+                      <div onClick={() => { closeAllDropdowns(); setShowDestinationDropdown(!showDestinationDropdown); }} className="cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1">
+                            <MapPinCheck className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" />
+                          </div>
+                          <div className="flex-1 text-left min-w-0">
+                            <p className="text-sm text-gray-600 font-medium mb-1">Destination</p>
+                            <p className={`text-base font-normal truncate ${bookingData.destination ? 'text-gray-900 font-semibold' : 'text-gray-400'}`}>
+                              {bookingData.destination || 'Select destination point'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      {showDestinationDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-64 overflow-y-auto">
+                          {getAvailableDestinationLocations().map((location, index) => (
+                            <button key={index} onClick={() => handleDestinationSelect(location)} className={`w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${bookingData.destination === location ? "bg-blue-50 text-[oklch(0.6155_0.1314_243.17)] font-semibold" : ""}`}>
+                              <div className="flex items-center gap-2"><MapPinCheck className="w-4 h-4" /><span className="text-sm">{location}</span></div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
                   <div className="border border-gray-300 rounded-xl p-6 mb-6 relative">
                     <div onClick={() => { closeAllDropdowns(); setShowDateDropdown(!showDateDropdown); }} className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                      <div className="flex items-center gap-4"><div className="w-12 h-12 flex items-center justify-center"><Calendar className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" /></div><div><p className="text-sm text-left text-gray-500 mb-1">Departure Date</p><p className="text-lg text-left font-bold text-gray-900">{bookingData.departureDate}</p></div></div>
-                      <div className="w-10 h-10 bg-[oklch(0.6155_0.1314_243.17)] rounded-full flex items-center justify-center"><ChevronDown className={`w-5 h-5 text-white transition-transform ${showDateDropdown ? 'rotate-180' : ''}`} /></div>
+                      <div className="flex text-left gap-4">
+                        <div className="w-12 h-12 flex items-center">
+                          <Calendar className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-left text-gray-500 mb-1">Departure Date</p>
+                          <p className="text-base md:text-lg text-left font-semibold md:font-semibold text-gray-900">{bookingData.departureDate}</p>
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 bg-[oklch(0.6155_0.1314_243.17)] rounded-full flex items-center justify-center">
+                        <ChevronDown className={`w-5 h-5 text-white transition-transform ${showDateDropdown ? 'rotate-180' : ''}`} />
+                      </div>
                     </div>
-                    {showDateDropdown && (<div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4"><input type="date" onChange={(e) => { const date = new Date(e.target.value); setBookingData({ ...bookingData, departureDate: formatDateToString(date) }); setShowDateDropdown(false); }} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[oklch(0.6155_0.1314_243.17)]" min={new Date().toISOString().split('T')[0]} /></div>)}
+                    {showDateDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4">
+                        <input 
+                          type="date" 
+                          onChange={(e) => { 
+                            const date = new Date(e.target.value); 
+                            setBookingData({ ...bookingData, departureDate: formatDateToString(date) }); 
+                            setShowDateDropdown(false); 
+                          }} 
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[oklch(0.6155_0.1314_243.17)]" 
+                          min={new Date().toISOString().split('T')[0]} 
+                        />
+                      </div>
+                    )}
                   </div>
+                  
                   <div className="border border-gray-300 rounded-xl p-6 relative">
                     <div onClick={() => { closeAllDropdowns(); setShowTimeDropdown(!showTimeDropdown); }} className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                      <div className="flex items-center gap-4"><div className="w-12 h-12 flex items-center justify-center"><Clock className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" /></div><div><p className="text-sm text-left text-gray-500 mb-1">Departure Time</p><p className="text-lg text-left font-bold text-gray-900">{bookingData.departureTime}</p></div></div>
-                      <div className="w-10 h-10 bg-[oklch(0.6155_0.1314_243.17)] rounded-full flex items-center justify-center"><ChevronDown className={`w-5 h-5 text-white transition-transform ${showTimeDropdown ? 'rotate-180' : ''}`} /></div>
+                      <div className="flex text-left gap-4">
+                        <div className="w-12 h-12 flex">
+                          <Clock className="w-6 h-6 text-[oklch(0.6155_0.1314_243.17)]" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-left text-gray-500 mb-1">Departure Time</p>
+                          <p className="text-base md:text-lg text-left font-semibold md:font-semibold text-gray-900">{bookingData.departureTime}</p>
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 bg-[oklch(0.6155_0.1314_243.17)] rounded-full flex items-center justify-center">
+                        <ChevronDown className={`w-5 h-5 text-white transition-transform ${showTimeDropdown ? 'rotate-180' : ''}`} />
+                      </div>
                     </div>
-                    {showTimeDropdown && (<div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{timeOptions.map((time, index) => (<button key={index} onClick={() => handleTimeSelect(time)} className={`w-full px-4 py-4 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${bookingData.departureTime === time.departure ? "bg-blue-50 text-[oklch(0.6155_0.1314_243.17)] font-semibold" : ""}`}><div className="flex items-center justify-between"><div className="flex items-center gap-3"><Clock className="w-5 h-5" /><div><p className="text-sm font-bold">Berangkat: {time.departure}</p><p className="text-xs text-gray-500">Tiba: {time.arrival}</p></div></div>{bookingData.departureTime === time.departure && (<CheckCircle className="w-5 h-5 text-[oklch(0.6155_0.1314_243.17)]" />)}</div></button>))}</div>)}
+                    {showTimeDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">
+                        {timeOptions.map((time, index) => (
+                          <button 
+                            key={index} 
+                            onClick={() => handleTimeSelect(time)} 
+                            className={`w-full px-4 py-4 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${bookingData.departureTime === time.departure ? "bg-blue-50 text-[oklch(0.6155_0.1314_243.17)] font-semibold" : ""}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Clock className="w-5 h-5" />
+                                <div>
+                                  <p className="text-sm font-bold">Berangkat: {time.departure}</p>
+                                  <p className="text-xs text-gray-500">Tiba: {time.arrival}</p>
+                                </div>
+                              </div>
+                              {bookingData.departureTime === time.departure && (
+                                <CheckCircle className="w-5 h-5 text-[oklch(0.6155_0.1314_243.17)]" />
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+              
               <div className="lg:col-span-1 lg:sticky lg:top-8">
                 <div className="bg-white rounded-2xl shadow-xl p-8">
                   <h2 className="text-2xl text-left font-bold text-[oklch(0.6155_0.1314_243.17)] mb-3">Your price summary</h2>
@@ -348,7 +542,58 @@ function Booking() {
                           {showPromoInput && (<div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4 w-80"><p className="text-sm text-left font-semibold text-gray-700 mb-2">Masukkan Kode Promo</p><div className="flex gap-2"><input type="text" value={promoCode} onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(""); }} placeholder="Contoh: MAHASISWA15" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[oklch(0.6155_0.1314_243.17)] text-sm" onKeyPress={(e) => e.key === 'Enter' && handleApplyPromo()} /><button onClick={handleApplyPromo} className="px-4 py-2 bg-[oklch(0.6155_0.1314_243.17)] text-white rounded-lg hover:bg-[oklch(0.55_0.14_243.17)] text-sm font-medium">Terapkan</button></div>{promoError && <p className="text-xs text-red-600 mt-2">⚠ {promoError}</p>}<div className="mt-3 text-xs text-gray-500"><p className="font-semibold mb-1">Kode tersedia:</p><p>MAHASISWA15, NEWUSER20, GASKEUNN10</p></div></div>)}
                         </div>
                       </div>
-                      {selectedQrisOption === "qris" && (<div className="mt-4 p-4 bg-white rounded-lg border-2 border-[oklch(0.6155_0.1314_243.17)]"><div className="text-center mb-3"><p className="text-sm font-bold text-gray-900 mb-1">Scan QRIS untuk Pembayaran</p><p className="text-xs text-gray-600">Total: Rp {totalPrice.toLocaleString('id-ID')}</p></div><div className="bg-white p-4 rounded-lg border border-gray-200 flex justify-center"><img src={QrisImage} alt="QRIS" className="w-48 h-48 object-contain rounded-lg" /></div></div>)}
+                      
+                      {selectedQrisOption === "qris" && (
+                        <div className="mt-4 p-4 bg-white rounded-lg border-2 border-[oklch(0.6155_0.1314_243.17)]">
+                          <div className="text-center mb-3">
+                            <p className="text-sm font-bold text-gray-900 mb-1">Scan QRIS untuk Pembayaran</p>
+                            <p className="text-xs text-gray-600">Total: Rp {totalPrice.toLocaleString('id-ID')}</p>
+                          </div>
+                          
+                          {qrisTimeRemaining > 0 && (
+                            <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <div className="flex items-center justify-center gap-2">
+                                <Timer className="w-5 h-5 text-blue-600" />
+                                <div className="text-center">
+                                  <p className="text-xs text-gray-600 mb-1">Waktu scan tersisa</p>
+                                  <p className="text-2xl font-bold text-blue-600">{formatTimeRemaining(qrisTimeRemaining)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="bg-white p-4 rounded-lg border border-gray-200 flex justify-center">
+                            <img src={QrisImage} alt="QRIS" className="w-48 h-48 object-contain rounded-lg" />
+                          </div>
+                          
+                          {qrisTimeRemaining > 0 && (
+                            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                              <label className="flex items-start gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={paymentConfirmed}
+                                  onChange={(e) => setPaymentConfirmed(e.target.checked)}
+                                  className="mt-1 w-5 h-5 text-[oklch(0.6155_0.1314_243.17)] border-gray-300 rounded focus:ring-2 focus:ring-[oklch(0.6155_0.1314_243.17)]"
+                                />
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-green-700">Saya sudah melakukan pembayaran</p>
+                                  <p className="text-xs text-green-600 mt-1">Centang jika Anda sudah transfer sebelum waktu habis</p>
+                                </div>
+                              </label>
+                            </div>
+                          )}
+                          
+                          {qrisTimeRemaining === 0 && (
+                            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                              <div className="flex items-center justify-center gap-2 text-green-700">
+                                <CheckCircle className="w-5 h-5" />
+                                <p className="text-sm font-semibold">Waktu scan selesai, silakan lanjutkan booking</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       {selectedQrisOption === "transfer" && (<div className="mt-4 p-4 bg-white rounded-lg border-2 border-[oklch(0.6155_0.1314_243.17)]"><p className="text-sm font-bold text-gray-900 mb-3 text-center">Transfer Bank</p><div className="space-y-2"><div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-600">Bank</p><p className="text-sm font-bold">Bank Central Asia (BCA)</p></div><div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-600">No. Rekening</p><p className="text-lg font-mono font-bold">1234567890</p></div><div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-600">Atas Nama</p><p className="text-sm font-bold">PT Gaskeunn Transportation</p></div><div className="bg-blue-50 p-3 rounded-lg border border-blue-200"><p className="text-xs text-gray-600">Jumlah Transfer</p><p className="text-xl font-bold text-[oklch(0.6155_0.1314_243.17)]">Rp {totalPrice.toLocaleString('id-ID')}</p></div></div></div>)}
                       {appliedPromo && (<div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200"><div className="flex items-center justify-between"><div><p className="text-sm text-green-700 font-medium">✓ {appliedPromo.name}</p><p className="text-xs text-green-600">Kode: {appliedPromo.code} • Hemat {appliedPromo.discount}%</p></div><button onClick={handleRemovePromo} className="text-red-600 hover:text-red-700 text-xs font-medium">Hapus</button></div></div>)}
                     </div>
@@ -367,17 +612,49 @@ function Booking() {
                     </div>
                   )}
 
-                  <button onClick={handleBookTicket} disabled={isBooking || (payNow && !selectedQrisOption)} className={`w-full font-bold py-4 rounded-lg shadow-lg transition flex items-center justify-center gap-2 ${isBooking || (payNow && !selectedQrisOption) ? 'bg-gray-400 cursor-not-allowed text-white' : payNow ? 'bg-linear-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90' : 'bg-linear-to-r from-purple-600 to-purple-500 text-white hover:opacity-90'}`}>
-                    {isBooking ? (<><Loader2 className="w-5 h-5 animate-spin" />Processing...</>) : payNow ? (<><Wallet className="w-5 h-5" />Bayar & Book Ticket</>) : (<><Timer className="w-5 h-5" />Book Ticket (Bayar Nanti)</>)}
+                  <button 
+                    onClick={handleBookTicket} 
+                    disabled={isBookingDisabled()} 
+                    className={`w-full font-bold py-4 rounded-lg shadow-lg transition flex items-center justify-center gap-2 ${
+                      isBookingDisabled()
+                        ? 'bg-gray-400 cursor-not-allowed text-white' 
+                        : payNow 
+                          ? 'bg-linear-to-r from-[#2B8CCD] to-[#83B1D1] text-white hover:opacity-90' 
+                          : 'bg-linear-to-r from-purple-600 to-purple-500 text-white hover:opacity-90'
+                    }`}
+                  >
+                    {isBooking ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" />Processing...</>
+                    ) : payNow ? (
+                      <><Wallet className="w-5 h-5" />Bayar & Book Ticket</>
+                    ) : (
+                      <><Timer className="w-5 h-5" />Book Ticket (Bayar Nanti)</>
+                    )}
                   </button>
-                  {payNow && !selectedQrisOption && (<p className="text-xs text-center text-gray-500 mt-2">Pilih metode pembayaran untuk melanjutkan</p>)}
-                  {!payNow && (<p className="text-xs text-center text-purple-600 mt-2 font-medium">Kamu bisa membayar dalam 10 menit setelah booking</p>)}
+                  
+                  {payNow && !selectedQrisOption && (
+                    <p className="text-xs text-center text-gray-500 mt-2">Pilih metode pembayaran untuk melanjutkan</p>
+                  )}
+                  {payNow && selectedQrisOption === "qris" && qrisTimeRemaining > 0 && !paymentConfirmed && (
+                    <p className="text-xs text-center text-orange-600 mt-2 font-medium">
+                      Tunggu {formatTimeRemaining(qrisTimeRemaining)} atau konfirmasi pembayaran untuk melanjutkan
+                    </p>
+                  )}
+                  {payNow && selectedQrisOption === "qris" && paymentConfirmed && (
+                    <p className="text-xs text-center text-green-600 mt-2 font-medium">
+                      ✓ Pembayaran dikonfirmasi, silakan lanjutkan booking
+                    </p>
+                  )}
+                  {!payNow && (
+                    <p className="text-xs text-center text-purple-600 mt-2 font-medium">Kamu bisa membayar dalam 10 menit setelah booking</p>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
       <Footer />
       <style>{`@keyframes bounce-in { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } } .animate-bounce-in { animation: bounce-in 0.5s ease-out; }`}</style>
     </>

@@ -33,7 +33,6 @@ const ChoiceCard = ({
       {/* Checkmark */}
       {isSelected && (
         <div className="absolute top-2 right-2 text-blue-500">
-          {/* Anda bisa menggunakan image checkmark atau ikon Font Awesome di sini */}
           <i className="fas fa-check-circle text-xl"></i>
         </div>
       )}
@@ -89,18 +88,18 @@ function Welcome() {
   ];
 
   const handleLogin = () => {
-    if (selectedRole) {
-      if (selectedRole === "Penumpang") {
-        // Penumpang harus melalui authentication
-        navigate("/auth", { state: { role: selectedRole } });
-        console.log(`Menavigasi ke /auth sebagai: ${selectedRole}`);
-      } else if (selectedRole === "Sopir") {
-        // Sopir langsung masuk ke home tanpa authentication
-        navigate("/homesopir");
-        console.log(`Menavigasi langsung ke home sebagai: ${selectedRole}`);
-      }
+  if (selectedRole) {
+    if (selectedRole === "Penumpang") {
+      // Penumpang ke halaman auth (ada register)
+      navigate("/auth", { state: { role: selectedRole } });
+      console.log(`Menavigasi ke /auth sebagai: ${selectedRole}`);
+    } else if (selectedRole === "Sopir") {
+      // Sopir ke halaman login (tanpa register)
+      navigate("/loginSopir");
+      console.log(`Menavigasi ke login sopir`);
     }
-  };
+  }
+};
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-8 bg-white">
@@ -133,8 +132,6 @@ function Welcome() {
               </div>
             ))}
           </div>
-
-          {/* Tambahkan elemen pemusat tambahan untuk tombol */}
         </div>
 
         <button
@@ -146,11 +143,10 @@ function Welcome() {
 
             ${
               selectedRole
-                ? "bg-blue-600 hover:bg-blue-700" // Aktif: Biru terang
-                : "bg-gray-200 cursor-not-allowed" // Nonaktif: Abu-abu
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-200 cursor-not-allowed"
             }
           `}
-          // Tombol nonaktif jika selectedRole adalah null
           disabled={!selectedRole}
           onClick={handleLogin}
         >

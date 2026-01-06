@@ -1,6 +1,7 @@
-// pages/AdminDashboard
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useReviews } from "../../context/ReviewContext";
+import { useNavigate } from "react-router-dom";
+import gaskeunnLogo from "../../assets/img/gaskeunnLogo.png";
 
 import {
   LayoutDashboard,
@@ -30,6 +31,7 @@ import {
   Save,
   XCircle,
   Plus,
+  LogOut,
 } from "lucide-react";
 import {
   AreaChart,
@@ -454,7 +456,7 @@ const yearlyChartData = [
 ];
 
 const pickupPointData = [
-  { name: "Araya", value: 35, color: "#3B82F6" },
+  { name: "Araya", value: 35, color: "oklch(0.6155 0.1314 243.17)" },
   { name: "Telaga Golf", value: 25, color: "#10B981" },
   { name: "Bundaran PBI", value: 20, color: "#F59E0B" },
   { name: "Masjid Ramadhan", value: 12, color: "#EF4444" },
@@ -639,6 +641,11 @@ function AdminDashboard() {
   ]);
   const [aiInput, setAiInput] = useState("");
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const profileDropdownRef = useRef(null);
+  const mainContentRef = useRef(null);
+  const navigate = useNavigate();
 
   // Refs for scroll navigation
   const dashboardRef = useRef(null);
@@ -649,6 +656,35 @@ function AdminDashboard() {
   const feedbackRef = useRef(null);
   const questionsRef = useRef(null);
   const aiAssistantRef = useRef(null);
+
+  // Prevent body scrolling - only main element should scroll
+  useEffect(() => {
+    // Save original overflow
+    const originalOverflow = document.body.style.overflow;
+    const originalMargin = document.body.style.margin;
+    const originalPadding = document.body.style.padding;
+    
+    // Set body to not scroll and remove default spacing
+    document.body.style.overflow = 'hidden';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    
+    // Also set html element
+    const htmlElement = document.documentElement;
+    const originalHtmlMargin = htmlElement.style.margin;
+    const originalHtmlPadding = htmlElement.style.padding;
+    htmlElement.style.margin = '0';
+    htmlElement.style.padding = '0';
+    
+    // Cleanup: restore original overflow when component unmounts
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.margin = originalMargin;
+      document.body.style.padding = originalPadding;
+      htmlElement.style.margin = originalHtmlMargin;
+      htmlElement.style.padding = originalHtmlPadding;
+    };
+  }, []);
 
   const menuItems = [
     {
@@ -722,6 +758,62 @@ function AdminDashboard() {
     },
   ];
 
+  // Scroll Spy Effect - Auto highlight menu based on visible section
+  useEffect(() => {
+    const mainElement = mainContentRef.current;
+    if (!mainElement) return;
+
+    const handleScroll = () => {
+      const scrollPosition = mainElement.scrollTop;
+      
+      const sections = [
+        { id: "dashboard", ref: dashboardRef },
+        { id: "passengers", ref: passengersRef },
+        { id: "passenger-list", ref: passengerListRef },
+        { id: "driver-list", ref: driverListRef },
+        { id: "revenue", ref: revenueRef },
+        { id: "feedback", ref: feedbackRef },
+        { id: "questions", ref: questionsRef },
+        { id: "ai-assistant", ref: aiAssistantRef },
+      ];
+
+      // Find which section is currently most visible
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const item = sections[i];
+        if (item.ref && item.ref.current) {
+          const section = item.ref.current;
+          const sectionTop = section.offsetTop - 200;
+          
+          // If scrolled past this section's start point, it's the active one
+          if (scrollPosition >= sectionTop) {
+            setActiveMenu(item.id);
+            break; // Stop after finding the first match
+          }
+        }
+      }
+    };
+
+    handleScroll();
+    mainElement.addEventListener("scroll", handleScroll);
+    
+    return () => mainElement.removeEventListener("scroll", handleScroll);
+  }, []); // Empty dependency - no activeMenu!
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const getChartData = () => {
     switch (chartPeriod) {
       case "weekly":
@@ -753,13 +845,67 @@ function AdminDashboard() {
     return colors[status] || "bg-gray-100 text-gray-700";
   };
 
+  // Filter data based on search query
+  const filteredPassengerData = passengerData.filter((passenger) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      passenger.name.toLowerCase().includes(query) ||
+      passenger.nim.toLowerCase().includes(query) ||
+      passenger.pickupPoint.toLowerCase().includes(query) ||
+      passenger.destination.toLowerCase().includes(query)
+    );
+  });
+
+  const filteredPassengerList = passengerList.filter((passenger) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      passenger.name.toLowerCase().includes(query) ||
+      passenger.nim.toLowerCase().includes(query) ||
+      passenger.email.toLowerCase().includes(query) ||
+      passenger.phone.toLowerCase().includes(query) ||
+      passenger.program.toLowerCase().includes(query)
+    );
+  });
+
+  const filteredDriverList = driverList.filter((driver) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      driver.name.toLowerCase().includes(query) ||
+      driver.driverId.toLowerCase().includes(query) ||
+      driver.email.toLowerCase().includes(query) ||
+      driver.phone.toLowerCase().includes(query)
+    );
+  });
+
+  const filteredQuestions = questions.filter((question) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      question.name.toLowerCase().includes(query) ||
+      question.email.toLowerCase().includes(query) ||
+      question.question.toLowerCase().includes(query) ||
+      question.reply.toLowerCase().includes(query)
+    );
+  });
+
+  const filteredReviews = reviews.filter((review) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      review.name.toLowerCase().includes(query) ||
+      review.comment.toLowerCase().includes(query)
+    );
+  });
+
   // Scroll to section function
   const scrollToSection = (menuItem) => {
     setActiveMenu(menuItem.id);
-    if (menuItem.ref && menuItem.ref.current) {
-      menuItem.ref.current.scrollIntoView({
+    if (menuItem.ref && menuItem.ref.current && mainContentRef.current) {
+      const mainElement = mainContentRef.current;
+      const section = menuItem.ref.current;
+      const sectionTop = section.offsetTop - 100; // offset 100px from top
+      
+      mainElement.scrollTo({
+        top: sectionTop,
         behavior: "smooth",
-        block: "start",
       });
     }
   };
@@ -927,23 +1073,40 @@ function AdminDashboard() {
     }, 1500);
   };
 
+  const handleLogout = () => {
+    console.log('🚪 Logging out admin');
+    
+    // Clear user data
+    localStorage.removeItem('user');
+    localStorage.setItem('isLoggedIn', 'false');
+    
+    console.log('✅ Admin logged out successfully');
+    
+    // Redirect to admin login
+    navigate("/admin/login");
+};
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen w-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar */}
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-20"
-        } bg-white border-r border-gray-200 transition-all duration-300 flex flex-col fixed h-full z-20 overflow-y-auto`}
+        } bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-full z-20 overflow-y-auto`}
         style={{
           scrollbarWidth: "thin",
           scrollbarColor: "#d1d5db transparent",
         }}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="px-4 py-4 border-b border-gray-200 h-[73px] flex items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-              <Bus className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+              <img 
+                src={gaskeunnLogo} 
+                alt="Gaskeunn Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
             {sidebarOpen && (
               <div>
@@ -969,13 +1132,31 @@ function AdminDashboard() {
                   onClick={() => scrollToSection(item)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     activeMenu === item.id
-                      ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
+                      ? "text-white shadow-lg"
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
+                  style={
+                    activeMenu === item.id
+                      ? {
+                          backgroundColor: "oklch(0.6155 0.1314 243.17)",
+                          boxShadow: "0 10px 15px -3px oklch(0.6155 0.1314 243.17 / 0.3)",
+                        }
+                      : {}
+                  }
+                  onMouseEnter={(e) => {
+                    if (activeMenu === item.id) {
+                      e.currentTarget.style.backgroundColor = "oklch(0.55 0.14 243.17)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeMenu === item.id) {
+                      e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17)";
+                    }
+                  }}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
                   {sidebarOpen && (
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-medium text-left flex-1">{item.label}</span>
                   )}
                 </button>
               </li>
@@ -1001,41 +1182,91 @@ function AdminDashboard() {
 
       {/* Main Content */}
       <main
-        className={`flex-1 overflow-auto ${
-          sidebarOpen ? "ml-64" : "ml-20"
-        } transition-all duration-300`}
+        ref={mainContentRef}
+        className="flex-1 overflow-auto bg-gray-50"
       >
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
-          <div className="flex items-center justify-between">
+        <header className="bg-white border-b border-gray-200 px-6 h-[73px] sticky top-0 z-30 flex items-center shadow-sm">
+          <div className="flex items-center justify-between w-full">
             {/* Search */}
             <div className="relative w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Search passengers, drivers, questions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
+                style={{
+                  "--tw-ring-color": "oklch(0.6155 0.1314 243.17)",
+                }}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            {/* Right Side */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
+            {/* Right Side - Profile with Dropdown */}
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg transition"
+              >
                 <div className="text-right">
                   <p className="font-semibold text-gray-900 text-sm">Admin</p>
                   <p className="text-xs text-gray-500">Super Admin</p>
                 </div>
 
-                <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{
+                    background: "linear-gradient(to right, #2B8CCD 0%, #83B1D1 100%)"
+                  }}
+                >
                   A
                 </div>
-              </div>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showProfileDropdown && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                  {/* User Info */}
+                  <div 
+                    className="px-4 py-3 text-white"
+                    style={{
+                      background: "linear-gradient(to right, #2B8CCD 0%, #83B1D1 100%)"
+                    }}
+                  >
+                    <p className="font-semibold">Admin</p>
+                    <p className="text-sm text-blue-100">
+                      admin@gaskeunn.com
+                    </p>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="py-2">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-3 transition"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-6">
+        <div className="py-6 px-6">
           {/* Dashboard Overview Section */}
           <section
             ref={dashboardRef}
@@ -1053,7 +1284,16 @@ function AdminDashboard() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                <button 
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition"
+                  style={{ backgroundColor: "oklch(0.6155 0.1314 243.17)" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "oklch(0.55 0.14 243.17)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17)";
+                  }}
+                >
                   <Download className="w-4 h-4" />
                   <span>Export</span>
                 </button>
@@ -1067,9 +1307,15 @@ function AdminDashboard() {
                   key={index}
                   className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                      <stat.icon className="w-6 h-6 text-blue-500" />
+                  <div className="flex items-start justify-between mb-4">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: "oklch(0.6155 0.1314 243.17 / 0.1)" }}
+                    >
+                      <stat.icon 
+                        className="w-6 h-6" 
+                        style={{ color: "oklch(0.6155 0.1314 243.17)" }}
+                      />
                     </div>
                     <div
                       className={`flex items-center gap-1 text-sm font-medium ${
@@ -1084,8 +1330,8 @@ function AdminDashboard() {
                       {stat.change}
                     </div>
                   </div>
-                  <p className="text-gray-500 text-sm mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-gray-500 text-sm mb-1 text-left">{stat.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 text-left">
                     {stat.value}
                   </p>
                 </div>
@@ -1112,9 +1358,24 @@ function AdminDashboard() {
                         onClick={() => setChartPeriod(period)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                           chartPeriod === period
-                            ? "bg-blue-500 text-white"
+                            ? "text-white"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                         }`}
+                        style={
+                          chartPeriod === period
+                            ? { backgroundColor: "oklch(0.6155 0.1314 243.17)" }
+                            : {}
+                        }
+                        onMouseEnter={(e) => {
+                          if (chartPeriod === period) {
+                            e.currentTarget.style.backgroundColor = "oklch(0.55 0.14 243.17)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (chartPeriod === period) {
+                            e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17)";
+                          }
+                        }}
                       >
                         {period.charAt(0).toUpperCase() + period.slice(1)}
                       </button>
@@ -1133,12 +1394,12 @@ function AdminDashboard() {
                       >
                         <stop
                           offset="5%"
-                          stopColor="#3B82F6"
+                          stopColor="oklch(0.6155 0.1314 243.17)"
                           stopOpacity={0.3}
                         />
                         <stop
                           offset="95%"
-                          stopColor="#3B82F6"
+                          stopColor="oklch(0.6155 0.1314 243.17)"
                           stopOpacity={0}
                         />
                       </linearGradient>
@@ -1161,7 +1422,7 @@ function AdminDashboard() {
                     <Area
                       type="monotone"
                       dataKey="passengers"
-                      stroke="#3B82F6"
+                      stroke="oklch(0.6155 0.1314 243.17)"
                       strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorPassengers)"
@@ -1230,12 +1491,27 @@ function AdminDashboard() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5 text-blue-500" />
+                  <FileSpreadsheet 
+                    className="w-5 h-5" 
+                    style={{ color: "oklch(0.6155 0.1314 243.17)" }}
+                  />
                   <h2 className="text-lg font-bold text-gray-900">
                     Daily Passengers
                   </h2>
                 </div>
-                <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100">
+                <button 
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition"
+                  style={{ 
+                    color: "oklch(0.6155 0.1314 243.17)",
+                    backgroundColor: "oklch(0.6155 0.1314 243.17 / 0.1)"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17 / 0.15)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17 / 0.1)";
+                  }}
+                >
                   <Download className="w-4 h-4" />
                   Export Excel
                 </button>
@@ -1271,43 +1547,51 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {passengerData.map((passenger) => (
-                      <tr
-                        key={passenger.id}
-                        className="border-b border-gray-50 hover:bg-gray-50"
-                      >
-                        <td className="py-3 px-4 font-medium text-gray-900 text-sm text-left">
-                          {passenger.name}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 text-left">
-                          {passenger.nim}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 text-left">
-                          {passenger.pickupPoint}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 text-left">
-                          {passenger.destination}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 text-left">
-                          {passenger.time}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 text-left">
-                          {passenger.bus}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 text-left">
-                          {passenger.seat}
-                        </td>
-                        <td className="py-3 px-4 text-left">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              passenger.status
-                            )}`}
-                          >
-                            {passenger.status}
-                          </span>
+                    {filteredPassengerData.length > 0 ? (
+                      filteredPassengerData.map((passenger) => (
+                        <tr
+                          key={passenger.id}
+                          className="border-b border-gray-50 hover:bg-gray-50"
+                        >
+                          <td className="py-3 px-4 font-medium text-gray-900 text-sm text-left">
+                            {passenger.name}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 text-left">
+                            {passenger.nim}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 text-left">
+                            {passenger.pickupPoint}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 text-left">
+                            {passenger.destination}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 text-left">
+                            {passenger.time}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 text-left">
+                            {passenger.bus}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 text-left">
+                            {passenger.seat}
+                          </td>
+                          <td className="py-3 px-4 text-left">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                passenger.status
+                              )}`}
+                            >
+                              {passenger.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-gray-500">
+                          No passengers found matching "{searchQuery}"
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1328,7 +1612,7 @@ function AdminDashboard() {
                     Passenger List
                   </h2>
                   <span className="text-sm text-gray-500">
-                    ({passengerList.length} users)
+                    ({filteredPassengerList.length} {searchQuery ? 'found' : 'users'})
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1405,7 +1689,8 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {passengerList.map((passenger) => (
+                    {filteredPassengerList.length > 0 ? (
+                      filteredPassengerList.map((passenger) => (
                       <tr
                         key={passenger.id}
                         className="border-b border-gray-50 hover:bg-gray-50 text-left"
@@ -1618,7 +1903,12 @@ function AdminDashboard() {
                           <>
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                                <div 
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                                  style={{
+                                    background: "linear-gradient(to bottom right, oklch(0.65 0.18 145), oklch(0.6155 0.1314 243.17))"
+                                  }}
+                                >
                                   {passenger.name.charAt(0)}
                                 </div>
                                 <span className="font-medium text-gray-900 text-sm whitespace-nowrap">
@@ -1636,8 +1926,9 @@ function AdminDashboard() {
                               {passenger.email}
                             </td>
                             <td
-                              className="py-3 px-3 text-sm text-blue-600 hover:underline cursor-pointer truncate max-w-[150px]"
+                              className="py-3 px-3 text-sm hover:underline cursor-pointer truncate max-w-[150px]"
                               title={passenger.linkedin}
+                              style={{ color: "oklch(0.6155 0.1314 243.17)" }}
                             >
                               {passenger.linkedin}
                             </td>
@@ -1683,7 +1974,14 @@ function AdminDashboard() {
                             <td className="py-3 px-3">
                               <button
                                 onClick={() => startEditPassenger(passenger)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                className="p-1.5 rounded-lg transition"
+                                style={{ color: "oklch(0.6155 0.1314 243.17)" }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17 / 0.1)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "transparent";
+                                }}
                                 title="Edit"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -1692,7 +1990,14 @@ function AdminDashboard() {
                           </>
                         )}
                       </tr>
-                    ))}
+                    ))
+                    ) : (
+                      <tr>
+                        <td colSpan={15} className="py-8 text-center text-gray-500">
+                          No passengers found matching "{searchQuery}"
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1713,7 +2018,7 @@ function AdminDashboard() {
                     Driver List
                   </h2>
                   <span className="text-sm text-gray-500">
-                    ({driverList.length} drivers)
+                    ({filteredDriverList.length} {searchQuery ? 'found' : 'drivers'})
                   </span>
                 </div>
                 <button
@@ -1888,7 +2193,8 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="text-left">
-                    {driverList.map((driver) => (
+                    {filteredDriverList.length > 0 ? (
+                      filteredDriverList.map((driver) => (
                       <tr
                         key={driver.id}
                         className="border-b border-gray-50 hover:bg-gray-50"
@@ -1993,7 +2299,12 @@ function AdminDashboard() {
                           <>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                <div 
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                                  style={{
+                                    background: "linear-gradient(to bottom right, oklch(0.55 0.15 300), oklch(0.5 0.12 280))"
+                                  }}
+                                >
                                   {driver.name.charAt(0)}
                                 </div>
                                 <span className="font-medium text-gray-900 text-sm">
@@ -2016,8 +2327,9 @@ function AdminDashboard() {
                               {driver.phone}
                             </td>
                             <td
-                              className="py-3 px-4 text-sm text-blue-600 hover:underline cursor-pointer truncate max-w-[150px]"
+                              className="py-3 px-4 text-sm hover:underline cursor-pointer truncate max-w-[150px]"
                               title={driver.linkedin}
+                              style={{ color: "oklch(0.6155 0.1314 243.17)" }}
                             >
                               {driver.linkedin}
                             </td>
@@ -2035,7 +2347,14 @@ function AdminDashboard() {
                             <td className="py-3 px-4">
                               <button
                                 onClick={() => startEditDriver(driver)}
-                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                className="p-1.5 rounded-lg transition"
+                                style={{ color: "oklch(0.6155 0.1314 243.17)" }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17 / 0.1)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "transparent";
+                                }}
                                 title="Edit"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -2044,7 +2363,14 @@ function AdminDashboard() {
                           </>
                         )}
                       </tr>
-                    ))}
+                    ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-gray-500">
+                          No drivers found matching "{searchQuery}"
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -2081,7 +2407,7 @@ function AdminDashboard() {
                     }}
                     formatter={(value) => [formatCurrency(value), "Revenue"]}
                   />
-                  <Bar dataKey="revenue" fill="#3B82F6" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="revenue" fill="oklch(0.6155 0.1314 243.17)" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -2165,11 +2491,11 @@ function AdminDashboard() {
                   </h2>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <span>Total: {reviews.length} reviews</span>
+                  <span>Total: {filteredReviews.length} {searchQuery ? 'found' : 'reviews'}</span>
                   <span className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-green-500 rounded"></div>
                     Displayed on Home:{" "}
-                    {reviews.filter((r) => r.displayOnHome).length}
+                    {filteredReviews.filter((r) => r.displayOnHome).length}
                   </span>
                 </div>
               </div>
@@ -2180,7 +2506,8 @@ function AdminDashboard() {
                   scrollbarColor: "#d1d5db transparent",
                 }}
               >
-                {reviews.map((review) => (
+                {filteredReviews.length > 0 ? (
+                  filteredReviews.map((review) => (
                   <div
                     key={review.id}
                     className={`p-4 rounded-xl border-2 transition-all ${
@@ -2227,7 +2554,12 @@ function AdminDashboard() {
                     </p>
                     <p className="text-xs text-gray-400">{review.date}</p>
                   </div>
-                ))}
+                ))
+                ) : (
+                  <div className="col-span-full py-8 text-center text-gray-500">
+                    No reviews found matching "{searchQuery}"
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -2250,12 +2582,12 @@ function AdminDashboard() {
                   <span className="flex items-center gap-1 text-yellow-600">
                     <div className="w-3 h-3 bg-yellow-500 rounded"></div>
                     Pending:{" "}
-                    {questions.filter((q) => q.status === "Pending").length}
+                    {filteredQuestions.filter((q) => q.status === "Pending").length}
                   </span>
                   <span className="flex items-center gap-1 text-green-600">
                     <div className="w-3 h-3 bg-green-500 rounded"></div>
                     Answered:{" "}
-                    {questions.filter((q) => q.status === "Answered").length}
+                    {filteredQuestions.filter((q) => q.status === "Answered").length}
                   </span>
                 </div>
               </div>
@@ -2266,7 +2598,8 @@ function AdminDashboard() {
                   scrollbarColor: "#d1d5db transparent",
                 }}
               >
-                {questions.map((question) => (
+                {filteredQuestions.length > 0 ? (
+                  filteredQuestions.map((question) => (
                   <div
                     key={question.id}
                     className={`p-4 rounded-xl border-2 transition-all ${
@@ -2278,7 +2611,12 @@ function AdminDashboard() {
                     {/* Question Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                          style={{
+                            background: "linear-gradient(to bottom right, oklch(0.55 0.15 300), oklch(0.6155 0.1314 243.17))"
+                          }}
+                        >
                           {question.name.charAt(0)}
                         </div>
                         <div>
@@ -2317,7 +2655,12 @@ function AdminDashboard() {
                     {question.status === "Answered" ? (
                       <div className="ml-6 border-l-2 border-green-300 pl-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                            style={{
+                              background: "linear-gradient(to bottom right, oklch(0.6155 0.1314 243.17), oklch(0.55 0.14 243.17))"
+                            }}
+                          >
                             A
                           </div>
                           <div>
@@ -2338,7 +2681,12 @@ function AdminDashboard() {
                     ) : (
                       <div className="ml-6 border-l-2 border-yellow-300 pl-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                            style={{
+                              background: "linear-gradient(to bottom right, oklch(0.6155 0.1314 243.17), oklch(0.55 0.14 243.17))"
+                            }}
+                          >
                             A
                           </div>
                           <p className="font-semibold text-gray-900 text-sm">
@@ -2358,7 +2706,18 @@ function AdminDashboard() {
                           <button
                             onClick={() => submitReply(question.id)}
                             disabled={!replyInputs[question.id]?.trim()}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 self-end"
+                            className="px-4 py-2 text-white rounded-lg font-medium text-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 self-end"
+                            style={{ backgroundColor: "oklch(0.6155 0.1314 243.17)" }}
+                            onMouseEnter={(e) => {
+                              if (!e.currentTarget.disabled) {
+                                e.currentTarget.style.backgroundColor = "oklch(0.55 0.14 243.17)";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!e.currentTarget.disabled) {
+                                e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17)";
+                              }
+                            }}
                           >
                             <Send className="w-4 h-4" />
                             Send
@@ -2367,7 +2726,12 @@ function AdminDashboard() {
                       </div>
                     )}
                   </div>
-                ))}
+                ))
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
+                    No questions found matching "{searchQuery}"
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -2378,7 +2742,12 @@ function AdminDashboard() {
             id="ai-assistant"
             className="scroll-mt-20"
           >
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 shadow-lg">
+            <div 
+              className="rounded-2xl p-6 shadow-lg"
+              style={{
+                background: "linear-gradient(to bottom right, oklch(0.6155 0.1314 243.17), oklch(0.55 0.15 300))"
+              }}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                   <Bot className="w-7 h-7 text-white" />
@@ -2387,7 +2756,7 @@ function AdminDashboard() {
                   <h2 className="text-xl text-left font-bold text-white">
                     AI Analytics Assistant
                   </h2>
-                  <p className="text-blue-100 text-sm">
+                  <p className="text-sm" style={{ color: "oklch(0.85 0.08 243.17)" }}>
                     Analyze data, get insights, and receive recommendations
                   </p>
                 </div>
@@ -2449,7 +2818,14 @@ function AdminDashboard() {
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition flex items-center gap-2"
+                  className="px-6 py-3 bg-white rounded-xl font-semibold transition flex items-center gap-2"
+                  style={{ color: "oklch(0.6155 0.1314 243.17)" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "oklch(0.6155 0.1314 243.17 / 0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "white";
+                  }}
                 >
                   <Send className="w-5 h-5" />
                   Send
